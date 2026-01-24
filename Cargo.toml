@@ -1,6 +1,6 @@
 [package]
 name = "ruvector-memopt"
-version = "0.2.2"
+version = "0.3.0"
 edition = "2021"
 rust-version = "1.75"
 authors = ["ruv <ruvnet@users.noreply.github.com>"]
@@ -21,6 +21,15 @@ exclude = [
     "*.msi",
 ]
 
+[features]
+default = []
+# AI Mode - GPU/VRAM monitoring, Ollama integration, resource bridging
+ai = ["reqwest", "dep:nvml-wrapper"]
+# NVML support for NVIDIA GPU monitoring
+nvml = ["dep:nvml-wrapper"]
+# Full AI features including all integrations
+ai-full = ["ai", "nvml"]
+
 [dependencies]
 num_cpus = "1.16"
 # Windows APIs
@@ -34,7 +43,14 @@ windows = { version = "0.58", features = [
     "Win32_Security",
     "Win32_UI_Shell",
     "Win32_UI_WindowsAndMessaging",
+    "Win32_Graphics_Dxgi",
 ]}
+
+# HTTP client for AI runtime APIs (optional)
+reqwest = { version = "0.11", features = ["json"], optional = true }
+
+# NVIDIA Management Library (optional)
+nvml-wrapper = { version = "0.9", optional = true }
 
 # WASM runtime for RuVector
 wasmer = "4.3"
