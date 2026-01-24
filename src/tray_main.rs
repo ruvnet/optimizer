@@ -15,6 +15,13 @@ mod algorithms;
 mod dashboard;
 
 fn main() {
+    // Immediately hide/detach from any console window
+    #[cfg(windows)]
+    {
+        use ::windows::Win32::System::Console::FreeConsole;
+        let _ = unsafe { FreeConsole() };
+    }
+
     // Initialize minimal logging (to file, not console)
     let log_path = std::env::temp_dir().join("ruvector-memopt.log");
     if let Ok(file) = std::fs::OpenOptions::new()

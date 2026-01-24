@@ -7,7 +7,6 @@ debug/
 target/
 
 # Build artifacts
-dist/
 installer/*.exe
 *.msi
 
