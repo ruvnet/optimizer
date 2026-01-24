@@ -10,11 +10,16 @@ Your computer slows down when too many programs use up RAM. RuVector MemOpt watc
 [![Platform](https://img.shields.io/badge/platform-Windows%2010%2F11-0078D6.svg)](https://github.com/ruvnet/optimizer)
 [![Rust](https://img.shields.io/badge/rust-1.75%2B-orange.svg)](https://www.rust-lang.org/)
 
-## What's New in v0.3.0
+## What's New in v0.3.1
+
+- **Settings Persistence** - All settings now saved to `%APPDATA%\RuVector\memopt.toml`
+- **Game Mode Detection** - Auto-detects 40+ games and skips optimization during gameplay
+- **Focus Mode Detection** - Detects video calls (Zoom, Teams, Discord) and optimizes aggressively
+- **Auto-Start on Login** - Installer adds tray to Windows startup
+
+### v0.3.0 Features
 
 - **AI Mode** - GPU/VRAM monitoring for AI workloads (Ollama, llama.cpp, PyTorch)
-- **Game Mode** - Auto-detects games and optimizes for gaming performance
-- **Focus Mode** - Detects video calls (Zoom, Teams) and prioritizes them
 - **System Tray Enhancements** - New settings menu, threshold controls, GitHub link
 - **Console-Free Tray** - Dedicated tray binary that runs without a console window
 
