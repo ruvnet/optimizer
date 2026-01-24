@@ -1,7 +1,7 @@
 ; RuVector MemOpt Installer Script (Inno Setup)
 
 #define MyAppName "RuVector Memory Optimizer"
-#define MyAppVersion "0.2.1"
+#define MyAppVersion "0.2.2"
 #define MyAppPublisher "ruv"
 #define MyAppURL "https://github.com/ruvnet/ruvector-memopt"
 #define MyAppExeName "ruvector-memopt.exe"
@@ -44,7 +44,7 @@ Name: "{group}\{cm:UninstallProgram,{#MyAppName}}"; Filename: "{uninstallexe}"
 Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Parameters: "tray"; Tasks: desktopicon
 
 [Registry]
-Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueType: string; ValueName: "RuVectorMemOpt"; ValueData: """{app}\{#MyAppExeName}"" daemon -i 60"; Flags: uninsdeletevalue; Tasks: startuptask
+Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueType: string; ValueName: "RuVectorMemOpt"; ValueData: """{app}\{#MyAppExeName}"" tray"; Flags: uninsdeletevalue; Tasks: startuptask
 
 [Run]
-Filename: "{app}\{#MyAppExeName}"; Parameters: "daemon -i 60"; Description: "Start automatic memory optimization"; Flags: nowait postinstall skipifsilent runhidden
+Filename: "{app}\{#MyAppExeName}"; Parameters: "tray"; Description: "Start RuVector Memory Optimizer"; Flags: nowait postinstall skipifsilent

@@ -1,13 +1,18 @@
-//! System tray icon and menu
+//! System tray icon and menu with automatic optimization
 
 use crate::windows::memory::WindowsMemoryOptimizer;
 use crate::accel::CpuCapabilities;
-use std::sync::{Arc, atomic::{AtomicBool, Ordering}};
+use std::sync::{Arc, atomic::{AtomicBool, AtomicU32, Ordering}};
 use tray_icon::{
-    menu::{Menu, MenuEvent, MenuItem, PredefinedMenuItem},
+    menu::{Menu, MenuEvent, MenuItem, CheckMenuItem, PredefinedMenuItem},
     TrayIconBuilder, Icon,
 };
 use winit::event_loop::{ControlFlow, EventLoop};
+
+/// Auto-optimization threshold (optimize when memory usage exceeds this %)
+const AUTO_OPTIMIZE_THRESHOLD: u32 = 75;
+/// Auto-optimization interval in seconds
+const AUTO_OPTIMIZE_INTERVAL: u64 = 60;
 
 pub struct TrayApp {
     running: Arc<AtomicBool>,
@@ -29,13 +34,15 @@ impl TrayApp {
         // Create menu items
         let menu = Menu::new();
         let status_item = MenuItem::new(&status_text, false, None);
+        let auto_item = CheckMenuItem::new("Auto-Optimize (60s)", true, true, None);
         let optimize_item = MenuItem::new("Optimize Now", true, None);
-        let aggressive_item = MenuItem::new("Aggressive Optimize", true, None);
-        let cpu_item = MenuItem::new("CPU Info", true, None);
+        let aggressive_item = MenuItem::new("Deep Clean", true, None);
+        let cpu_item = MenuItem::new("System Info", true, None);
         let quit_item = MenuItem::new("Quit", true, None);
 
         menu.append(&status_item)?;
         menu.append(&PredefinedMenuItem::separator())?;
+        menu.append(&auto_item)?;
         menu.append(&optimize_item)?;
         menu.append(&aggressive_item)?;
         menu.append(&PredefinedMenuItem::separator())?;
@@ -43,13 +50,18 @@ impl TrayApp {
         menu.append(&PredefinedMenuItem::separator())?;
         menu.append(&quit_item)?;
 
-        // Create tray icon
-        let icon_data = create_icon_data();
+        // Get initial memory usage for icon
+        let initial_usage = WindowsMemoryOptimizer::get_memory_status()
+            .map(|s| s.memory_load_percent)
+            .unwrap_or(50);
+
+        // Create tray icon with current usage
+        let icon_data = create_icon_with_usage(initial_usage);
         let icon = Icon::from_rgba(icon_data, 32, 32)?;
 
-        let _tray_icon = TrayIconBuilder::new()
+        let tray_icon = TrayIconBuilder::new()
             .with_menu(Box::new(menu))
-            .with_tooltip("RuVector Memory Optimizer")
+            .with_tooltip("RuVector Memory Optimizer - Auto-optimizing")
             .with_icon(icon)
             .build()?;
 
@@ -57,9 +69,14 @@ impl TrayApp {
         let aggressive_id = aggressive_item.id().clone();
         let cpu_id = cpu_item.id().clone();
         let quit_id = quit_item.id().clone();
+        let auto_id = auto_item.id().clone();
 
         let running = self.running.clone();
         let mut last_update = std::time::Instant::now();
+        let mut last_auto_optimize = std::time::Instant::now();
+        let auto_enabled = Arc::new(AtomicBool::new(true));
+        let last_usage = Arc::new(AtomicU32::new(initial_usage));
+        let total_freed = Arc::new(AtomicU32::new(0));
 
         // Run event loop
         #[allow(deprecated)]
@@ -68,23 +85,85 @@ impl TrayApp {
                 std::time::Instant::now() + std::time::Duration::from_secs(1)
             ));
 
-            // Update status text periodically
+            // Update status and check for auto-optimization every 5 seconds
             if last_update.elapsed() > std::time::Duration::from_secs(5) {
-                let text = get_memory_status_text();
-                let _ = status_item.set_text(&text);
+                if let Ok(status) = WindowsMemoryOptimizer::get_memory_status() {
+                    let usage = status.memory_load_percent;
+                    last_usage.store(usage, Ordering::SeqCst);
+
+                    // Update status text
+                    let freed = total_freed.load(Ordering::SeqCst);
+                    let text = if freed > 0 {
+                        format!(
+                            "Memory: {:.0}% ({:.1}/{:.1} GB) | Freed: {} MB",
+                            usage,
+                            status.used_physical_mb() / 1024.0,
+                            status.total_physical_mb / 1024.0,
+                            freed
+                        )
+                    } else {
+                        format!(
+                            "Memory: {:.0}% ({:.1}/{:.1} GB)",
+                            usage,
+                            status.used_physical_mb() / 1024.0,
+                            status.total_physical_mb / 1024.0
+                        )
+                    };
+                    let _ = status_item.set_text(&text);
+
+                    // Update icon color based on usage
+                    let icon_data = create_icon_with_usage(usage);
+                    if let Ok(new_icon) = Icon::from_rgba(icon_data, 32, 32) {
+                        let _ = tray_icon.set_icon(Some(new_icon));
+                    }
+
+                    // Update tooltip
+                    let tooltip = if auto_enabled.load(Ordering::SeqCst) {
+                        format!("RuVector MemOpt - {}% | Auto-optimizing", usage)
+                    } else {
+                        format!("RuVector MemOpt - {}% | Manual mode", usage)
+                    };
+                    let _ = tray_icon.set_tooltip(Some(tooltip));
+
+                    // Auto-optimize if enabled and conditions met
+                    if auto_enabled.load(Ordering::SeqCst)
+                        && usage > AUTO_OPTIMIZE_THRESHOLD
+                        && last_auto_optimize.elapsed() > std::time::Duration::from_secs(AUTO_OPTIMIZE_INTERVAL)
+                    {
+                        let total_freed_clone = total_freed.clone();
+                        std::thread::spawn(move || {
+                            let optimizer = WindowsMemoryOptimizer::new();
+                            if let Ok(result) = optimizer.optimize(false) {
+                                if result.freed_mb > 100.0 {
+                                    // Only count significant optimizations
+                                    let current = total_freed_clone.load(Ordering::SeqCst);
+                                    total_freed_clone.store(current + result.freed_mb as u32, Ordering::SeqCst);
+                                }
+                            }
+                        });
+                        last_auto_optimize = std::time::Instant::now();
+                    }
+                }
                 last_update = std::time::Instant::now();
             }
 
+            // Handle menu events
             if let Ok(event) = MenuEvent::receiver().try_recv() {
                 if event.id == quit_id {
                     running.store(false, Ordering::SeqCst);
                     event_loop.exit();
                 } else if event.id == optimize_id {
-                    run_optimization(false);
+                    let total_freed_clone = total_freed.clone();
+                    run_optimization(false, total_freed_clone);
                 } else if event.id == aggressive_id {
-                    run_optimization(true);
+                    let total_freed_clone = total_freed.clone();
+                    run_optimization(true, total_freed_clone);
                 } else if event.id == cpu_id {
                     show_cpu_info();
+                } else if event.id == auto_id {
+                    let current = auto_enabled.load(Ordering::SeqCst);
+                    auto_enabled.store(!current, Ordering::SeqCst);
+                    let _ = auto_item.set_checked(!current);
                 }
             }
         })?;
@@ -106,11 +185,14 @@ fn get_memory_status_text() -> String {
     }
 }
 
-fn run_optimization(aggressive: bool) {
+fn run_optimization(aggressive: bool, total_freed: Arc<AtomicU32>) {
     std::thread::spawn(move || {
         let optimizer = WindowsMemoryOptimizer::new();
         match optimizer.optimize(aggressive) {
             Ok(result) => {
+                let current = total_freed.load(Ordering::SeqCst);
+                total_freed.store(current + result.freed_mb as u32, Ordering::SeqCst);
+
                 let msg = format!(
                     "Optimization Complete!\n\nFreed: {:.1} MB\nProcesses: {}\nTime: {} ms",
                     result.freed_mb, result.processes_trimmed, result.duration_ms
@@ -163,14 +245,6 @@ fn show_message_box(title: &str, message: &str) {
             );
         }
     }
-}
-
-/// Create a memory-chip shaped icon with color based on usage
-/// - Green: < 60% usage (healthy)
-/// - Orange: 60-80% usage (moderate)
-/// - Red: > 80% usage (critical)
-fn create_icon_data() -> Vec<u8> {
-    create_icon_with_usage(50) // Default to green
 }
 
 /// Create icon with specific memory usage percentage for color coding
