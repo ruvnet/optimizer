@@ -1,0 +1,7 @@
+// Windows resource file for tray application
+// This embeds the manifest to ensure no console window
+
+#include <winuser.h>
+
+// Manifest resource - must be ID 1 for executables
+1 RT_MANIFEST "tray.manifest"
