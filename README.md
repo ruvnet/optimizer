@@ -10,6 +10,14 @@ Your computer slows down when too many programs use up RAM. RuVector MemOpt watc
 [![Platform](https://img.shields.io/badge/platform-Windows%2010%2F11-0078D6.svg)](https://github.com/ruvnet/optimizer)
 [![Rust](https://img.shields.io/badge/rust-1.75%2B-orange.svg)](https://www.rust-lang.org/)
 
+## What's New in v0.3.0
+
+- **AI Mode** - GPU/VRAM monitoring for AI workloads (Ollama, llama.cpp, PyTorch)
+- **Game Mode** - Auto-detects games and optimizes for gaming performance
+- **Focus Mode** - Detects video calls (Zoom, Teams) and prioritizes them
+- **System Tray Enhancements** - New settings menu, threshold controls, GitHub link
+- **Console-Free Tray** - Dedicated tray binary that runs without a console window
+
 ## What It Does
 
 - **Frees memory** when your PC gets slow
@@ -40,7 +48,14 @@ When you right-click the tray icon:
 - **Memory status** (updates every few seconds)
 - **Optimize Now** - free memory instantly
 - **Deep Clean** - more aggressive optimization
+- **AI Mode** - Configure AI workload optimization
+  - Game Mode Auto-Detect
+  - Focus Mode Auto-Detect
+  - Thermal Prediction
+  - Predictive Preloading
+- **Settings** - Customize optimization thresholds (75%, 80%, 85%, 90%)
 - **System Info** - see your CPU capabilities
+- **GitHub Repository** - Quick link to project page
 
 ## How Much Memory Does It Free?
 
@@ -130,11 +145,61 @@ The icon also shows a fill level indicator representing current memory usage.
 | Updates in real-time | Sometimes | Yes |
 | Open source | Rarely | Yes |
 
+## AI Mode (v0.3.0)
+
+RuVector now includes intelligent AI workload support for users running local LLMs, machine learning, or GPU-intensive applications.
+
+### Features
+
+| Feature | Description |
+|---------|-------------|
+| **GPU/VRAM Monitoring** | Real-time tracking of VRAM usage across NVIDIA, AMD, and Intel GPUs |
+| **AI Workload Detection** | Auto-detects Ollama, llama.cpp, vLLM, PyTorch, TensorFlow, RuVLLM |
+| **Resource Bridging** | Intelligent CPU/GPU/RAM allocation for optimal inference performance |
+| **Game Mode** | Detects 40+ popular games and prioritizes gaming performance |
+| **Focus Mode** | Detects video calls (Zoom, Teams, Meet) and ensures smooth conferencing |
+| **Thermal Prediction** | Anticipates thermal throttling and pre-emptively optimizes |
+| **Predictive Preloading** | Learns usage patterns to preload frequently used models |
+
+### Enabling AI Mode
+
+AI Mode is an optional feature. Install with AI features enabled:
+
+```bash
+# Install with AI features
+cargo install ruvector-memopt --features ai
+
+# Install with full AI features (including NVIDIA NVML)
+cargo install ruvector-memopt --features ai-full
+```
+
+### Placement Strategies
+
+When running LLMs, RuVector can optimize model layer placement:
+
+| Strategy | Description |
+|----------|-------------|
+| **GPU First** | Maximize GPU usage for fastest inference |
+| **Balanced** | Balance between CPU and GPU |
+| **Latency Optimized** | Minimize time-to-first-token |
+| **Power Efficient** | Reduce power consumption |
+| **Throughput Optimized** | Maximize tokens per second |
+
+### Supported AI Runtimes
+
+- Ollama
+- llama.cpp
+- vLLM
+- PyTorch / TensorFlow
+- ONNX Runtime
+- RuVLLM (RuVector's LLM runtime)
+
 ## System Requirements
 
 - Windows 10 or 11
 - 4 GB RAM minimum
 - Works without admin (admin unlocks more features)
+- **For AI Mode**: NVIDIA GPU recommended (AMD/Intel supported with limited features)
 
 ## For Developers
 
@@ -142,13 +207,44 @@ The icon also shows a fill level indicator representing current memory usage.
 ```bash
 git clone https://github.com/ruvnet/optimizer
 cd optimizer
+
+# Build all binaries
 cargo build --release
+
+# Build with AI features
+cargo build --release --features ai
+
+# Build with full AI features (NVIDIA NVML)
+cargo build --release --features ai-full
 ```
+
+### Binaries Produced
+
+| Binary | Description |
+|--------|-------------|
+| `ruvector-memopt.exe` | Main CLI with all commands |
+| `ruvector-memopt-tray.exe` | System tray app (no console window) |
+| `ruvector-memopt-service.exe` | Windows service for background optimization |
 
 ### Install from Crates.io
 ```bash
+# Basic installation
 cargo install ruvector-memopt
+
+# With AI features
+cargo install ruvector-memopt --features ai
+
+# With full AI features (NVIDIA NVML support)
+cargo install ruvector-memopt --features ai-full
 ```
+
+### Feature Flags
+
+| Feature | Description |
+|---------|-------------|
+| `ai` | GPU/VRAM monitoring, Ollama integration, workload detection |
+| `nvml` | NVIDIA Management Library for detailed GPU metrics |
+| `ai-full` | All AI features including NVML |
 
 ### CPU Acceleration Detected
 
@@ -187,7 +283,7 @@ A: Yes! Older PCs with less RAM benefit the most.
 
 ```
 ┌───────────────────────────────────────────────────────────────┐
-│                      RuVector MemOpt                           │
+│                    RuVector MemOpt v0.3.0                      │
 ├───────────────────────────────────────────────────────────────┤
 │  CLI Interface  │  System Tray  │  Dashboard  │  Win Service  │
 ├───────────────────────────────────────────────────────────────┤
@@ -199,6 +295,17 @@ A: Yes! Older PCs with less RAM benefit the most.
 │  └─────────────┘  └─────────────┘  │  └─────────────────┘  │ │
 │                                     └───────────────────────┘ │
 ├───────────────────────────────────────────────────────────────┤
+│                    AI Mode (Optional)                          │
+│  ┌─────────────┐  ┌─────────────┐  ┌───────────────────────┐ │
+│  │    GPU      │  │   Workload  │  │     Resource          │ │
+│  │   Monitor   │  │   Detector  │  │     Bridge            │ │
+│  │ (DXGI/NVML) │  │(Ollama/LLM) │  │  (CPU/GPU/NPU)        │ │
+│  └─────────────┘  └─────────────┘  └───────────────────────┘ │
+│  ┌─────────────┐  ┌─────────────┐                            │
+│  │  Game Mode  │  │ Focus Mode  │  Auto-detect 40+ games     │
+│  │  (Gaming)   │  │(Video Call) │  Zoom/Teams/Meet support   │
+│  └─────────────┘  └─────────────┘                            │
+├───────────────────────────────────────────────────────────────┤
 │                    Advanced Algorithms                         │
 │  ┌─────────────┐  ┌─────────────┐  ┌───────────────────────┐ │
 │  │   MinCut    │  │  Count-Min  │  │     Spectral          │ │
@@ -209,7 +316,7 @@ A: Yes! Older PCs with less RAM benefit the most.
 │  SIMD Acceleration (AVX2/AVX-512/AVX-VNNI)                    │
 ├───────────────────────────────────────────────────────────────┤
 │                  Windows Memory APIs (Win32)                   │
-│  SetProcessWorkingSetSizeEx │ GetProcessMemoryInfo            │
+│  SetProcessWorkingSetSizeEx │ GetProcessMemoryInfo │ DXGI    │
 └───────────────────────────────────────────────────────────────┘
 ```
 
@@ -220,6 +327,15 @@ A: Yes! Older PCs with less RAM benefit the most.
 - **EWC Learner**: Elastic Weight Consolidation prevents forgetting successful strategies
 - **Process Scorer**: Ranks processes by memory footprint for targeted optimization
 - **SIMD Optimizer**: Hardware-accelerated vector operations for pattern matching
+
+### AI Mode Components (Optional)
+
+- **GPU Monitor**: Real-time VRAM tracking via DXGI (all GPUs) or NVML (NVIDIA)
+- **AI Workload Detector**: Identifies running AI runtimes (Ollama, PyTorch, etc.)
+- **Resource Bridge**: Unified CPU/GPU/NPU resource allocation
+- **Game Mode**: Auto-detects 40+ popular games for optimized gaming
+- **Focus Mode**: Prioritizes video conferencing apps (Zoom, Teams, Meet)
+- **Ollama Client**: Direct integration with Ollama API for model management
 
 ## Smart Features (What Makes It Better)
 
