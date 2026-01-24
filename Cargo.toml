@@ -106,6 +106,10 @@ path = "src/main.rs"
 name = "ruvector-memopt-service"
 path = "src/service/main.rs"
 
+[[bin]]
+name = "ruvector-memopt-tray"
+path = "src/tray_main.rs"
+
 [profile.release]
 opt-level = 3
 lto = true
