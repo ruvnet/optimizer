@@ -45,6 +45,9 @@
       <Component Id="TrayExecutable" Guid="*">
         <File Id="TrayExe" Source="bin/ruvector-memopt-tray.exe" KeyPath="yes"/>
       </Component>
+      <Component Id="TrayLauncher" Guid="*">
+        <File Id="TrayVbs" Source="bin/RuVectorTray.vbs" KeyPath="yes"/>
+      </Component>
     </ComponentGroup>
 
     <ComponentGroup Id="ServiceComponents" Directory="INSTALLFOLDER">
@@ -88,14 +91,14 @@
       </Component>
     </DirectoryRef>
 
-    <!-- Startup Entry (optional - runs tray on login) -->
+    <!-- Startup Entry (runs tray on login via VBS for no console flash) -->
     <DirectoryRef Id="INSTALLFOLDER">
       <Component Id="StartupEntry" Guid="*">
         <RegistryValue Root="HKCU"
                        Key="Software\Microsoft\Windows\CurrentVersion\Run"
                        Name="RuVectorMemOpt"
                        Type="string"
-                       Value="&quot;[INSTALLFOLDER]ruvector-memopt-tray.exe&quot;"
+                       Value="wscript.exe &quot;[INSTALLFOLDER]RuVectorTray.vbs&quot;"
                        KeyPath="yes"/>
       </Component>
     </DirectoryRef>
