@@ -8,6 +8,7 @@ Your computer slows down when too many programs use up RAM. RuVector MemOpt watc
 [![Documentation](https://docs.rs/ruvector-memopt/badge.svg)](https://docs.rs/ruvector-memopt)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-Windows%2010%2F11-0078D6.svg)](https://github.com/ruvnet/optimizer)
+[![Rust](https://img.shields.io/badge/rust-1.75%2B-orange.svg)](https://www.rust-lang.org/)
 
 ## What It Does
 
@@ -85,13 +86,32 @@ When your RAM fills up, Windows starts using your hard drive as backup memory (c
 
 Open Command Prompt and run:
 
+```bash
+ruvector-memopt status              # Check your memory
+ruvector-memopt optimize            # Free memory now
+ruvector-memopt optimize --aggressive  # Deep memory cleanup
+ruvector-memopt optimize --dry-run  # Preview without changes
+ruvector-memopt tray                # Start tray icon
+ruvector-memopt daemon              # Continuous background optimization
+ruvector-memopt daemon -i 30        # Custom interval (30 seconds)
+ruvector-memopt startup             # One-time startup optimization
+ruvector-memopt cpu                 # Show CPU/SIMD info
+ruvector-memopt dashboard           # Live memory view
+ruvector-memopt bench               # Run performance benchmarks
+ruvector-memopt config              # Show current configuration
 ```
-RuVectorMemOpt.exe status      # Check your memory
-RuVectorMemOpt.exe optimize    # Free memory now
-RuVectorMemOpt.exe tray        # Start tray icon
-RuVectorMemOpt.exe cpu         # Show CPU info
-RuVectorMemOpt.exe dashboard   # Live memory view
-```
+
+### Tray Icon Colors
+
+The system tray icon changes color based on memory usage:
+
+| Color | Memory Usage | Status |
+|-------|-------------|--------|
+| 🟢 Green | < 60% | Healthy |
+| 🟠 Orange | 60-80% | Moderate pressure |
+| 🔴 Red | > 80% | High pressure |
+
+The icon also shows a fill level indicator representing current memory usage.
 
 ## Why Is This Better Than Other Memory Cleaners?
 
@@ -155,6 +175,68 @@ A: Windows is conservative - it keeps lots of cache "just in case". This tool ag
 
 **Q: Will it help my old PC?**
 A: Yes! Older PCs with less RAM benefit the most.
+
+## Architecture
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                    RuVector MemOpt                       │
+├─────────────────────────────────────────────────────────┤
+│  CLI Interface  │  System Tray  │  Windows Service      │
+├─────────────────────────────────────────────────────────┤
+│              Intelligent Optimizer Core                  │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────────┐ │
+│  │   Neural    │  │   Pattern   │  │    Process      │ │
+│  │   Engine    │  │   Index     │  │    Scorer       │ │
+│  │  (GNN/EWC)  │  │   (HNSW)    │  │                 │ │
+│  └─────────────┘  └─────────────┘  └─────────────────┘ │
+├─────────────────────────────────────────────────────────┤
+│  SIMD Acceleration (AVX2/AVX-512/AVX-VNNI)             │
+├─────────────────────────────────────────────────────────┤
+│              Windows Memory APIs (Win32)                 │
+│  SetProcessWorkingSetSizeEx │ GetProcessMemoryInfo      │
+└─────────────────────────────────────────────────────────┘
+```
+
+### Key Components
+
+- **Neural Decision Engine**: Uses attention mechanisms and pattern learning to decide optimal optimization timing
+- **HNSW Pattern Index**: Fast similarity search for memory usage patterns
+- **EWC Learner**: Elastic Weight Consolidation prevents forgetting successful strategies
+- **Process Scorer**: Ranks processes by memory footprint for targeted optimization
+- **SIMD Optimizer**: Hardware-accelerated vector operations for pattern matching
+
+## Library Usage
+
+Use RuVector MemOpt as a library in your Rust project:
+
+```rust
+use ruvector_memopt::{OptimizerConfig, IntelligentOptimizer};
+
+#[tokio::main]
+async fn main() {
+    let config = OptimizerConfig::default();
+    let mut optimizer = IntelligentOptimizer::new(config);
+
+    // Evaluate and optimize if needed
+    if let Ok(decision) = optimizer.evaluate().await {
+        if decision.should_optimize {
+            let result = optimizer.optimize(&decision).await.unwrap();
+            println!("Freed {} MB", result.freed_mb);
+        }
+    }
+}
+```
+
+## Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
 
 ## License
 
