@@ -1,0 +1,92 @@
+# Cargo configuration for cross-platform builds
+# RuVector Memory Optimizer
+
+# ============================================================================
+# ANDROID NDK CROSS-COMPILATION TARGETS
+# ============================================================================
+# To use these targets, set the ANDROID_NDK_HOME environment variable
+# and ensure the NDK toolchains are installed.
+#
+# Example usage:
+#   export ANDROID_NDK_HOME=/path/to/android-ndk
+#   cargo build --target aarch64-linux-android --features android
+#
+# Install targets with:
+#   rustup target add aarch64-linux-android
+#   rustup target add armv7-linux-androideabi
+#   rustup target add x86_64-linux-android
+#   rustup target add i686-linux-android
+# ============================================================================
+
+# ARM64 Android (most modern devices)
+[target.aarch64-linux-android]
+linker = "aarch64-linux-android-clang"
+ar = "llvm-ar"
+
+# ARMv7 Android (older 32-bit devices)
+[target.armv7-linux-androideabi]
+linker = "armv7a-linux-androideabi-clang"
+ar = "llvm-ar"
+
+# x86_64 Android (emulators, some Chromebooks)
+[target.x86_64-linux-android]
+linker = "x86_64-linux-android-clang"
+ar = "llvm-ar"
+
+# i686 Android (older emulators)
+[target.i686-linux-android]
+linker = "i686-linux-android-clang"
+ar = "llvm-ar"
+
+# ============================================================================
+# ENVIRONMENT CONFIGURATION
+# ============================================================================
+# These can be overridden by setting environment variables directly
+
+[env]
+# Uncomment and set these if not using environment variables:
+# ANDROID_NDK_HOME = "/path/to/android-ndk"
+# ANDROID_API_LEVEL = "21"
+
+# ============================================================================
+# BUILD SETTINGS
+# ============================================================================
+
+[build]
+# Default target for cargo build (commented out - use explicit --target)
+# target = "x86_64-pc-windows-msvc"
+
+# Number of parallel jobs (uses all CPUs by default)
+# jobs = 8
+
+[profile.release-android]
+inherits = "release"
+opt-level = "z"      # Optimize for size on mobile
+lto = true
+codegen-units = 1
+strip = true
+panic = "abort"      # Smaller binary, no unwinding
+
+[profile.dev-android]
+inherits = "dev"
+opt-level = 1        # Some optimization for usable dev builds on device
+debug = 1            # Minimal debug info
+
+# ============================================================================
+# FEATURE FLAGS FOR DIFFERENT PLATFORMS
+# ============================================================================
+#
+# Windows Desktop (with GUI):
+#   cargo build --features desktop
+#   cargo build --features windows  (alias)
+#
+# Android:
+#   cargo build --target aarch64-linux-android --features android
+#
+# Cross-platform core only:
+#   cargo build  (no features)
+#
+# With AI features:
+#   cargo build --features "desktop,ai"
+#   cargo build --target aarch64-linux-android --features "android,ai"
+# ============================================================================
