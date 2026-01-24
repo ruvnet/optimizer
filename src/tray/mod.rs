@@ -1,18 +1,23 @@
-//! System tray icon and menu with automatic optimization
+//! System tray icon and menu with automatic optimization and AI Mode settings
 
 use crate::windows::memory::WindowsMemoryOptimizer;
 use crate::accel::CpuCapabilities;
 use std::sync::{Arc, atomic::{AtomicBool, AtomicU32, Ordering}};
 use tray_icon::{
-    menu::{Menu, MenuEvent, MenuItem, CheckMenuItem, PredefinedMenuItem},
+    menu::{Menu, MenuEvent, MenuItem, CheckMenuItem, Submenu, PredefinedMenuItem},
     TrayIconBuilder, Icon,
 };
 use winit::event_loop::{ControlFlow, EventLoop};
 
 /// Auto-optimization threshold (optimize when memory usage exceeds this %)
-const AUTO_OPTIMIZE_THRESHOLD: u32 = 75;
+pub const AUTO_OPTIMIZE_THRESHOLD: u32 = 75;
 /// Auto-optimization interval in seconds
-const AUTO_OPTIMIZE_INTERVAL: u64 = 60;
+pub const AUTO_OPTIMIZE_INTERVAL: u64 = 60;
+
+/// GitHub repository URL
+const GITHUB_URL: &str = "https://github.com/ruvnet/optimizer";
+/// Version string
+const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 pub struct TrayApp {
     running: Arc<AtomicBool>,
@@ -33,20 +38,57 @@ impl TrayApp {
 
         // Create menu items
         let menu = Menu::new();
+
+        // Status section
         let status_item = MenuItem::new(&status_text, false, None);
+        let version_item = MenuItem::new(&format!("v{}", VERSION), false, None);
+
+        // Main actions
         let auto_item = CheckMenuItem::new("Auto-Optimize (60s)", true, true, None);
         let optimize_item = MenuItem::new("Optimize Now", true, None);
         let aggressive_item = MenuItem::new("Deep Clean", true, None);
+
+        // AI Mode submenu
+        let ai_menu = Submenu::new("AI Mode", true);
+        let game_mode_item = CheckMenuItem::new("Game Mode Auto-Detect", true, true, None);
+        let focus_mode_item = CheckMenuItem::new("Focus Mode Auto-Detect", true, true, None);
+        let thermal_item = CheckMenuItem::new("Thermal Prediction", true, true, None);
+        let preload_item = CheckMenuItem::new("Predictive Preloading", true, true, None);
+        ai_menu.append(&game_mode_item)?;
+        ai_menu.append(&focus_mode_item)?;
+        ai_menu.append(&PredefinedMenuItem::separator())?;
+        ai_menu.append(&thermal_item)?;
+        ai_menu.append(&preload_item)?;
+
+        // Settings submenu
+        let settings_menu = Submenu::new("Settings", true);
+        let threshold_75 = CheckMenuItem::new("Threshold: 75%", true, true, None);
+        let threshold_80 = CheckMenuItem::new("Threshold: 80%", true, false, None);
+        let threshold_85 = CheckMenuItem::new("Threshold: 85%", true, false, None);
+        let threshold_90 = CheckMenuItem::new("Threshold: 90%", true, false, None);
+        settings_menu.append(&threshold_75)?;
+        settings_menu.append(&threshold_80)?;
+        settings_menu.append(&threshold_85)?;
+        settings_menu.append(&threshold_90)?;
+
+        // Info section
         let cpu_item = MenuItem::new("System Info", true, None);
+        let github_item = MenuItem::new("GitHub Repository", true, None);
         let quit_item = MenuItem::new("Quit", true, None);
 
+        // Build menu
         menu.append(&status_item)?;
+        menu.append(&version_item)?;
         menu.append(&PredefinedMenuItem::separator())?;
         menu.append(&auto_item)?;
         menu.append(&optimize_item)?;
         menu.append(&aggressive_item)?;
         menu.append(&PredefinedMenuItem::separator())?;
+        menu.append(&ai_menu)?;
+        menu.append(&settings_menu)?;
+        menu.append(&PredefinedMenuItem::separator())?;
         menu.append(&cpu_item)?;
+        menu.append(&github_item)?;
         menu.append(&PredefinedMenuItem::separator())?;
         menu.append(&quit_item)?;
 
@@ -61,20 +103,35 @@ impl TrayApp {
 
         let tray_icon = TrayIconBuilder::new()
             .with_menu(Box::new(menu))
-            .with_tooltip("RuVector Memory Optimizer - Auto-optimizing")
+            .with_tooltip(&format!("RuVector MemOpt v{} - Auto-optimizing", VERSION))
             .with_icon(icon)
             .build()?;
 
+        // Store menu item IDs
         let optimize_id = optimize_item.id().clone();
         let aggressive_id = aggressive_item.id().clone();
         let cpu_id = cpu_item.id().clone();
         let quit_id = quit_item.id().clone();
         let auto_id = auto_item.id().clone();
+        let github_id = github_item.id().clone();
+        let game_mode_id = game_mode_item.id().clone();
+        let focus_mode_id = focus_mode_item.id().clone();
+        let thermal_id = thermal_item.id().clone();
+        let preload_id = preload_item.id().clone();
+        let threshold_75_id = threshold_75.id().clone();
+        let threshold_80_id = threshold_80.id().clone();
+        let threshold_85_id = threshold_85.id().clone();
+        let threshold_90_id = threshold_90.id().clone();
 
         let running = self.running.clone();
         let mut last_update = std::time::Instant::now();
         let mut last_auto_optimize = std::time::Instant::now();
         let auto_enabled = Arc::new(AtomicBool::new(true));
+        let game_mode_enabled = Arc::new(AtomicBool::new(true));
+        let focus_mode_enabled = Arc::new(AtomicBool::new(true));
+        let thermal_enabled = Arc::new(AtomicBool::new(true));
+        let preload_enabled = Arc::new(AtomicBool::new(true));
+        let current_threshold = Arc::new(AtomicU32::new(75));
         let last_usage = Arc::new(AtomicU32::new(initial_usage));
         let total_freed = Arc::new(AtomicU32::new(0));
 
@@ -93,6 +150,7 @@ impl TrayApp {
 
                     // Update status text
                     let freed = total_freed.load(Ordering::SeqCst);
+                    let threshold = current_threshold.load(Ordering::SeqCst);
                     let text = if freed > 0 {
                         format!(
                             "Memory: {:.0}% ({:.1}/{:.1} GB) | Freed: {} MB",
@@ -117,17 +175,21 @@ impl TrayApp {
                         let _ = tray_icon.set_icon(Some(new_icon));
                     }
 
-                    // Update tooltip
+                    // Update tooltip with mode info
+                    let modes = build_mode_string(
+                        game_mode_enabled.load(Ordering::SeqCst),
+                        focus_mode_enabled.load(Ordering::SeqCst),
+                    );
                     let tooltip = if auto_enabled.load(Ordering::SeqCst) {
-                        format!("RuVector MemOpt - {}% | Auto-optimizing", usage)
+                        format!("RuVector v{} - {}% | Auto @{}%{}", VERSION, usage, threshold, modes)
                     } else {
-                        format!("RuVector MemOpt - {}% | Manual mode", usage)
+                        format!("RuVector v{} - {}% | Manual{}", VERSION, usage, modes)
                     };
                     let _ = tray_icon.set_tooltip(Some(tooltip));
 
                     // Auto-optimize if enabled and conditions met
                     if auto_enabled.load(Ordering::SeqCst)
-                        && usage > AUTO_OPTIMIZE_THRESHOLD
+                        && usage > threshold
                         && last_auto_optimize.elapsed() > std::time::Duration::from_secs(AUTO_OPTIMIZE_INTERVAL)
                     {
                         let total_freed_clone = total_freed.clone();
@@ -135,7 +197,6 @@ impl TrayApp {
                             let optimizer = WindowsMemoryOptimizer::new();
                             if let Ok(result) = optimizer.optimize(false) {
                                 if result.freed_mb > 100.0 {
-                                    // Only count significant optimizations
                                     let current = total_freed_clone.load(Ordering::SeqCst);
                                     total_freed_clone.store(current + result.freed_mb as u32, Ordering::SeqCst);
                                 }
@@ -160,15 +221,68 @@ impl TrayApp {
                     run_optimization(true, total_freed_clone);
                 } else if event.id == cpu_id {
                     show_cpu_info();
+                } else if event.id == github_id {
+                    open_github();
                 } else if event.id == auto_id {
                     let current = auto_enabled.load(Ordering::SeqCst);
                     auto_enabled.store(!current, Ordering::SeqCst);
                     let _ = auto_item.set_checked(!current);
+                } else if event.id == game_mode_id {
+                    let current = game_mode_enabled.load(Ordering::SeqCst);
+                    game_mode_enabled.store(!current, Ordering::SeqCst);
+                    let _ = game_mode_item.set_checked(!current);
+                } else if event.id == focus_mode_id {
+                    let current = focus_mode_enabled.load(Ordering::SeqCst);
+                    focus_mode_enabled.store(!current, Ordering::SeqCst);
+                    let _ = focus_mode_item.set_checked(!current);
+                } else if event.id == thermal_id {
+                    let current = thermal_enabled.load(Ordering::SeqCst);
+                    thermal_enabled.store(!current, Ordering::SeqCst);
+                    let _ = thermal_item.set_checked(!current);
+                } else if event.id == preload_id {
+                    let current = preload_enabled.load(Ordering::SeqCst);
+                    preload_enabled.store(!current, Ordering::SeqCst);
+                    let _ = preload_item.set_checked(!current);
+                } else if event.id == threshold_75_id {
+                    current_threshold.store(75, Ordering::SeqCst);
+                    let _ = threshold_75.set_checked(true);
+                    let _ = threshold_80.set_checked(false);
+                    let _ = threshold_85.set_checked(false);
+                    let _ = threshold_90.set_checked(false);
+                } else if event.id == threshold_80_id {
+                    current_threshold.store(80, Ordering::SeqCst);
+                    let _ = threshold_75.set_checked(false);
+                    let _ = threshold_80.set_checked(true);
+                    let _ = threshold_85.set_checked(false);
+                    let _ = threshold_90.set_checked(false);
+                } else if event.id == threshold_85_id {
+                    current_threshold.store(85, Ordering::SeqCst);
+                    let _ = threshold_75.set_checked(false);
+                    let _ = threshold_80.set_checked(false);
+                    let _ = threshold_85.set_checked(true);
+                    let _ = threshold_90.set_checked(false);
+                } else if event.id == threshold_90_id {
+                    current_threshold.store(90, Ordering::SeqCst);
+                    let _ = threshold_75.set_checked(false);
+                    let _ = threshold_80.set_checked(false);
+                    let _ = threshold_85.set_checked(false);
+                    let _ = threshold_90.set_checked(true);
                 }
             }
         })?;
 
         Ok(())
+    }
+}
+
+fn build_mode_string(game: bool, focus: bool) -> String {
+    let mut modes = Vec::new();
+    if game { modes.push("Game"); }
+    if focus { modes.push("Focus"); }
+    if modes.is_empty() {
+        String::new()
+    } else {
+        format!(" | {}", modes.join("+"))
     }
 }
 
@@ -209,16 +323,35 @@ fn run_optimization(aggressive: bool, total_freed: Arc<AtomicU32>) {
 fn show_cpu_info() {
     let caps = CpuCapabilities::detect();
     let msg = format!(
-        "CPU: {}\n\nCores: {}\nAVX2: {}\nAVX-512: {}\nAVX-VNNI: {}\nIntel NPU: {}\n\nEstimated SIMD Speedup: {:.0}x",
+        "RuVector Memory Optimizer v{}\n\n\
+        CPU: {}\n\n\
+        Cores: {}\n\
+        AVX2: {}\n\
+        AVX-512: {}\n\
+        AVX-VNNI: {}\n\
+        Intel NPU: {}\n\n\
+        Estimated SIMD Speedup: {:.1}x\n\n\
+        GitHub: {}",
+        VERSION,
         caps.model,
         caps.core_count,
         if caps.has_avx2 { "Yes" } else { "No" },
         if caps.has_avx512 { "Yes" } else { "No" },
         if caps.has_avx_vnni { "Yes" } else { "No" },
         if caps.has_npu { "Yes" } else { "No" },
-        caps.estimated_speedup()
+        caps.estimated_speedup(),
+        GITHUB_URL
     );
-    show_message_box("CPU Information", &msg);
+    show_message_box("System Information", &msg);
+}
+
+fn open_github() {
+    #[cfg(windows)]
+    {
+        let _ = std::process::Command::new("cmd")
+            .args(["/C", "start", GITHUB_URL])
+            .spawn();
+    }
 }
 
 fn show_message_box(title: &str, message: &str) {
