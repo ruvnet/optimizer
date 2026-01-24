@@ -26,6 +26,8 @@ pub mod neural;
 pub mod bench;
 pub mod monitor;
 pub mod security;
+pub mod algorithms;
+pub mod dashboard;
 
 // Re-exports
 pub use core::config::OptimizerConfig;
@@ -34,5 +36,8 @@ pub use neural::engine::NeuralDecisionEngine;
 pub use monitor::realtime::RealtimeMonitor;
 pub use windows::safety::{SafetyConfig, SafetyGuard};
 pub use security::privileges::PrivilegeManager;
+pub use algorithms::{MinCutClusterer, ProcessPageRank, CountMinSketch, SpectralAnalyzer};
+pub use bench::{AdvancedBenchmarkRunner, BenchmarkSuite};
+pub use dashboard::{DashboardServer, DashboardData};
 pub mod accel;
 pub mod tray;
