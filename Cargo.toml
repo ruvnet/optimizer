@@ -4,14 +4,14 @@ version = "0.3.1"
 edition = "2021"
 rust-version = "1.75"
 authors = ["ruv <ruvnet@users.noreply.github.com>"]
-description = "Intelligent Windows memory optimizer with neural learning capabilities for smart optimization decisions"
+description = "Intelligent cross-platform memory optimizer with neural learning capabilities for smart optimization decisions"
 license = "MIT"
 repository = "https://github.com/ruvnet/optimizer"
 homepage = "https://github.com/ruvnet/optimizer"
 documentation = "https://docs.rs/ruvector-memopt"
 readme = "README.md"
-keywords = ["memory", "optimizer", "windows", "neural", "performance"]
-categories = ["memory-management", "os::windows-apis", "command-line-utilities"]
+keywords = ["memory", "optimizer", "neural", "performance", "cross-platform"]
+categories = ["memory-management", "command-line-utilities"]
 exclude = [
     "dist/*",
     "installer/*",
@@ -23,39 +23,30 @@ exclude = [
 
 [features]
 default = []
+
+# Desktop feature - enables Windows GUI components (tray, service)
+desktop = ["dep:tray-icon", "dep:winit", "dep:windows-service", "dep:interprocess"]
+
+# Windows alias for backward compatibility
+windows = ["desktop"]
+
+# Android platform support
+android = ["dep:jni", "dep:android_logger", "dep:ndk-context"]
+
 # AI Mode - GPU/VRAM monitoring, Ollama integration, resource bridging
 ai = ["reqwest", "dep:nvml-wrapper"]
-# NVML support for NVIDIA GPU monitoring
+
+# NVML support for NVIDIA GPU monitoring (Windows/Linux only)
 nvml = ["dep:nvml-wrapper"]
+
 # Full AI features including all integrations
 ai-full = ["ai", "nvml"]
 
+# ============================================================================
+# SHARED CROSS-PLATFORM DEPENDENCIES
+# ============================================================================
 [dependencies]
 num_cpus = "1.16"
-# Windows APIs
-windows = { version = "0.58", features = [
-    "Win32_Foundation",
-    "Win32_System_Memory",
-    "Win32_System_ProcessStatus",
-    "Win32_System_Threading",
-    "Win32_System_SystemInformation",
-    "Win32_System_Diagnostics_ToolHelp",
-    "Win32_System_Console",
-    "Win32_Security",
-    "Win32_UI_Shell",
-    "Win32_UI_WindowsAndMessaging",
-    "Win32_Graphics_Dxgi",
-]}
-
-# HTTP client for AI runtime APIs (optional)
-reqwest = { version = "0.11", features = ["json"], optional = true }
-
-# NVIDIA Management Library (optional)
-nvml-wrapper = { version = "0.9", optional = true }
-
-# WASM runtime for RuVector
-wasmer = "4.3"
-wasmer-compiler-singlepass = "4.3"
 
 # Async runtime
 tokio = { version = "1.36", features = ["full"] }
@@ -64,13 +55,6 @@ tokio = { version = "1.36", features = ["full"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 toml = "0.8"
-
-# System tray
-tray-icon = "0.14"
-winit = { version = "0.30", features = ["rwh_06"] }
-
-# Windows service
-windows-service = "0.7"
 
 # Logging
 tracing = "0.1"
@@ -87,16 +71,63 @@ chrono = "0.4"
 ndarray = "0.15"
 rand = "0.8"
 
-# IPC for service communication
-interprocess = "2.0"
+# WASM runtime for RuVector (cross-platform)
+wasmer = "4.3"
+wasmer-compiler-singlepass = "4.3"
 
-[target.'cfg(windows)'.dependencies]
+# HTTP client for AI runtime APIs (optional, cross-platform)
+reqwest = { version = "0.11", features = ["json"], optional = true }
+
+# NVIDIA Management Library (optional, Windows/Linux only)
+nvml-wrapper = { version = "0.9", optional = true }
+
+# Desktop GUI components (optional, enabled by 'desktop' feature)
+tray-icon = { version = "0.14", optional = true }
+winit = { version = "0.30", features = ["rwh_06"], optional = true }
+windows-service = { version = "0.7", optional = true }
+interprocess = { version = "2.0", optional = true }
+
+# Android-specific dependencies (optional, enabled by 'android' feature)
+jni = { version = "0.21", optional = true }
+android_logger = { version = "0.13", optional = true }
+ndk-context = { version = "0.1", optional = true }
+
+# ============================================================================
+# WINDOWS-SPECIFIC DEPENDENCIES
+# ============================================================================
+[target.'cfg(target_os = "windows")'.dependencies]
+# Windows APIs
+windows = { version = "0.58", features = [
+    "Win32_Foundation",
+    "Win32_System_Memory",
+    "Win32_System_ProcessStatus",
+    "Win32_System_Threading",
+    "Win32_System_SystemInformation",
+    "Win32_System_Diagnostics_ToolHelp",
+    "Win32_System_Console",
+    "Win32_Security",
+    "Win32_UI_Shell",
+    "Win32_UI_WindowsAndMessaging",
+    "Win32_Graphics_Dxgi",
+]}
+
 winapi = { version = "0.3", features = [
     "memoryapi", "psapi", "processthreadsapi",
     "sysinfoapi", "winbase", "winnt", "errhandlingapi"
 ]}
 
-[build-dependencies]
+# ============================================================================
+# ANDROID-SPECIFIC DEPENDENCIES
+# ============================================================================
+[target.'cfg(target_os = "android")'.dependencies]
+jni = "0.21"
+android_logger = "0.13"
+ndk-context = "0.1"
+
+# ============================================================================
+# BUILD DEPENDENCIES
+# ============================================================================
+[target.'cfg(target_os = "windows")'.build-dependencies]
 embed-resource = "2.4"
 
 [[bin]]
@@ -106,10 +137,12 @@ path = "src/main.rs"
 [[bin]]
 name = "ruvector-memopt-service"
 path = "src/service/main.rs"
+required-features = ["desktop"]
 
 [[bin]]
 name = "ruvector-memopt-tray"
 path = "src/tray_main.rs"
+required-features = ["desktop"]
 
 [profile.release]
 opt-level = 3

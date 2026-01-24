@@ -22,6 +22,7 @@
 
 pub mod core;
 pub mod windows;
+pub mod platform;
 pub mod neural;
 pub mod bench;
 pub mod monitor;
@@ -39,7 +40,15 @@ pub use security::privileges::PrivilegeManager;
 pub use algorithms::{MinCutClusterer, ProcessPageRank, CountMinSketch, SpectralAnalyzer};
 pub use bench::{AdvancedBenchmarkRunner, BenchmarkSuite};
 pub use dashboard::{DashboardServer, DashboardData};
+pub use platform::{
+    MemoryInfo, OptimizationReport, PlatformError, PlatformResult,
+    PlatformMemoryManager, PlatformProcessManager, PlatformSystemInfo,
+    PlatformPerformanceUtils, Platform, ProcessInfo, SystemDetails,
+    create_platform,
+};
 pub mod accel;
+
+#[cfg(feature = "desktop")]
 pub mod tray;
 
 // AI Mode - optional GPU/VRAM management and AI workload optimization
