@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+  <Product Id="*" 
+           Name="RuVector Memory Optimizer" 
+           Language="1033" 
+           Version="1.0.0.0" 
+           Manufacturer="RuVector" 
+           UpgradeCode="A1B2C3D4-E5F6-7890-ABCD-EF1234567890">
+    
+    <Package InstallerVersion="500" 
+             Compressed="yes" 
+             InstallScope="perMachine"
+             Description="Intelligent memory optimizer with neural learning"
+             Comments="RuVector MemOpt - Super optimize your Windows memory"/>
+
+    <MajorUpgrade DowngradeErrorMessage="A newer version is already installed." />
+    <MediaTemplate EmbedCab="yes" />
+
+    <Feature Id="MainApp" Title="RuVector MemOpt" Level="1">
+      <ComponentGroupRef Id="ProductComponents" />
+      <ComponentGroupRef Id="ServiceComponents" />
+    </Feature>
+
+    <Directory Id="TARGETDIR" Name="SourceDir">
+      <Directory Id="ProgramFiles64Folder">
+        <Directory Id="INSTALLFOLDER" Name="RuVector MemOpt">
+          <Directory Id="DataFolder" Name="data"/>
+        </Directory>
+      </Directory>
+      <Directory Id="ProgramMenuFolder">
+        <Directory Id="ApplicationProgramsFolder" Name="RuVector MemOpt"/>
+      </Directory>
+    </Directory>
+
+    <ComponentGroup Id="ProductComponents" Directory="INSTALLFOLDER">
+      <Component Id="MainExecutable" Guid="*">
+        <File Id="MainExe" Source="bin/ruvector-memopt.exe" KeyPath="yes"/>
+      </Component>
+    </ComponentGroup>
+
+    <ComponentGroup Id="ServiceComponents" Directory="INSTALLFOLDER">
+      <Component Id="ServiceInstall" Guid="*">
+        <File Id="ServiceExe" Source="bin/ruvector-memopt-service.exe" KeyPath="yes"/>
+        <ServiceInstall
+          Id="ServiceInstaller"
+          Type="ownProcess"
+          Name="RuVectorMemOpt"
+          DisplayName="RuVector Memory Optimizer"
+          Description="Intelligent background memory optimization service"
+          Start="auto"
+          Account="LocalSystem"
+          ErrorControl="normal"/>
+        <ServiceControl
+          Id="ServiceControl"
+          Name="RuVectorMemOpt"
+          Start="install"
+          Stop="both"
+          Remove="uninstall"
+          Wait="yes"/>
+      </Component>
+    </ComponentGroup>
+
+    <!-- Shortcut -->
+    <DirectoryRef Id="ApplicationProgramsFolder">
+      <Component Id="ApplicationShortcut" Guid="*">
+        <Shortcut Id="AppShortcut"
+                  Name="RuVector MemOpt Dashboard"
+                  Target="[INSTALLFOLDER]ruvector-memopt.exe"
+                  Arguments="dashboard"
+                  WorkingDirectory="INSTALLFOLDER"/>
+        <RemoveFolder Id="RemoveAppFolder" On="uninstall"/>
+        <RegistryValue Root="HKCU" Key="Software\RuVector\MemOpt" 
+                       Name="installed" Type="integer" Value="1" KeyPath="yes"/>
+      </Component>
+    </DirectoryRef>
+
+    <!-- UI -->
+    <UIRef Id="WixUI_Minimal"/>
+    <WixVariable Id="WixUILicenseRtf" Value="license.rtf"/>
+  </Product>
+</Wix>

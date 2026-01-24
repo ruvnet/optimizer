@@ -1,0 +1,97 @@
+[package]
+name = "ruvector-memopt"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.75"
+authors = ["ruv <ruvnet@users.noreply.github.com>"]
+description = "Intelligent Windows memory optimizer with neural learning capabilities for smart optimization decisions"
+license = "MIT"
+repository = "https://github.com/ruvnet/optimizer"
+homepage = "https://github.com/ruvnet/optimizer"
+documentation = "https://docs.rs/ruvector-memopt"
+readme = "README.md"
+keywords = ["memory", "optimizer", "windows", "neural", "performance"]
+categories = ["memory-management", "os::windows-apis", "command-line-utilities"]
+exclude = [
+    "dist/*",
+    "installer/*",
+    "target/*",
+    ".github/*",
+    "*.exe",
+    "*.msi",
+]
+
+[dependencies]
+num_cpus = "1.16"
+# Windows APIs
+windows = { version = "0.58", features = [
+    "Win32_Foundation",
+    "Win32_System_Memory",
+    "Win32_System_ProcessStatus",
+    "Win32_System_Threading",
+    "Win32_System_SystemInformation",
+    "Win32_System_Diagnostics_ToolHelp",
+    "Win32_Security",
+    "Win32_UI_Shell",
+    "Win32_UI_WindowsAndMessaging",
+]}
+
+# WASM runtime for RuVector
+wasmer = "4.3"
+wasmer-compiler-singlepass = "4.3"
+
+# Async runtime
+tokio = { version = "1.36", features = ["full"] }
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+toml = "0.8"
+
+# System tray
+tray-icon = "0.14"
+winit = { version = "0.30", features = ["rwh_06"] }
+
+# Windows service
+windows-service = "0.7"
+
+# Logging
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# CLI
+clap = { version = "4.5", features = ["derive"] }
+
+# Metrics & time
+sysinfo = "0.30"
+chrono = "0.4"
+
+# Neural/ML utilities
+ndarray = "0.15"
+rand = "0.8"
+
+# IPC for service communication
+interprocess = "2.0"
+
+[target.'cfg(windows)'.dependencies]
+winapi = { version = "0.3", features = [
+    "memoryapi", "psapi", "processthreadsapi",
+    "sysinfoapi", "winbase", "winnt", "errhandlingapi"
+]}
+
+[build-dependencies]
+embed-resource = "2.4"
+
+[[bin]]
+name = "ruvector-memopt"
+path = "src/main.rs"
+
+[[bin]]
+name = "ruvector-memopt-service"
+path = "src/service/main.rs"
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+strip = true
