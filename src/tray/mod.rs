@@ -1,8 +1,11 @@
 //! System tray icon and menu with automatic optimization and AI Mode settings
 
+mod settings;
+pub use settings::{TraySettings, AIModeSettings};
+
 use crate::windows::memory::WindowsMemoryOptimizer;
 use crate::accel::CpuCapabilities;
-use std::sync::{Arc, atomic::{AtomicBool, AtomicU32, Ordering}};
+use std::sync::{Arc, Mutex, atomic::{AtomicBool, AtomicU32, Ordering}};
 use tray_icon::{
     menu::{Menu, MenuEvent, MenuItem, CheckMenuItem, Submenu, PredefinedMenuItem},
     TrayIconBuilder, Icon,
@@ -21,17 +24,26 @@ const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 pub struct TrayApp {
     running: Arc<AtomicBool>,
+    settings: Arc<Mutex<TraySettings>>,
 }
 
 impl TrayApp {
     pub fn new() -> Self {
+        // Load persisted settings
+        let settings = TraySettings::load();
+        tracing::info!("Loaded settings: threshold={}%, auto={}", settings.threshold, settings.auto_optimize);
+
         Self {
             running: Arc::new(AtomicBool::new(true)),
+            settings: Arc::new(Mutex::new(settings)),
         }
     }
 
     pub fn run(&self) -> Result<(), Box<dyn std::error::Error>> {
         let event_loop = EventLoop::new()?;
+
+        // Get initial settings
+        let initial_settings = self.settings.lock().unwrap().clone();
 
         // Get initial memory status
         let status_text = get_memory_status_text();
@@ -43,29 +55,42 @@ impl TrayApp {
         let status_item = MenuItem::new(&status_text, false, None);
         let version_item = MenuItem::new(&format!("v{}", VERSION), false, None);
 
-        // Main actions
-        let auto_item = CheckMenuItem::new("Auto-Optimize (60s)", true, true, None);
+        // Main actions - use saved settings
+        let auto_item = CheckMenuItem::new(
+            &format!("Auto-Optimize ({}s)", initial_settings.interval_secs),
+            true,
+            initial_settings.auto_optimize,
+            None
+        );
         let optimize_item = MenuItem::new("Optimize Now", true, None);
         let aggressive_item = MenuItem::new("Deep Clean", true, None);
 
-        // AI Mode submenu
+        // AI Mode submenu - use saved settings
         let ai_menu = Submenu::new("AI Mode", true);
-        let game_mode_item = CheckMenuItem::new("Game Mode Auto-Detect", true, true, None);
-        let focus_mode_item = CheckMenuItem::new("Focus Mode Auto-Detect", true, true, None);
-        let thermal_item = CheckMenuItem::new("Thermal Prediction", true, true, None);
-        let preload_item = CheckMenuItem::new("Predictive Preloading", true, true, None);
+        let game_mode_item = CheckMenuItem::new(
+            "Game Mode Auto-Detect", true, initial_settings.ai_mode.game_mode, None
+        );
+        let focus_mode_item = CheckMenuItem::new(
+            "Focus Mode Auto-Detect", true, initial_settings.ai_mode.focus_mode, None
+        );
+        let thermal_item = CheckMenuItem::new(
+            "Thermal Prediction", true, initial_settings.ai_mode.thermal_prediction, None
+        );
+        let preload_item = CheckMenuItem::new(
+            "Predictive Preloading", true, initial_settings.ai_mode.predictive_preload, None
+        );
         ai_menu.append(&game_mode_item)?;
         ai_menu.append(&focus_mode_item)?;
         ai_menu.append(&PredefinedMenuItem::separator())?;
         ai_menu.append(&thermal_item)?;
         ai_menu.append(&preload_item)?;
 
-        // Settings submenu
+        // Settings submenu - use saved threshold
         let settings_menu = Submenu::new("Settings", true);
-        let threshold_75 = CheckMenuItem::new("Threshold: 75%", true, true, None);
-        let threshold_80 = CheckMenuItem::new("Threshold: 80%", true, false, None);
-        let threshold_85 = CheckMenuItem::new("Threshold: 85%", true, false, None);
-        let threshold_90 = CheckMenuItem::new("Threshold: 90%", true, false, None);
+        let threshold_75 = CheckMenuItem::new("Threshold: 75%", true, initial_settings.threshold == 75, None);
+        let threshold_80 = CheckMenuItem::new("Threshold: 80%", true, initial_settings.threshold == 80, None);
+        let threshold_85 = CheckMenuItem::new("Threshold: 85%", true, initial_settings.threshold == 85, None);
+        let threshold_90 = CheckMenuItem::new("Threshold: 90%", true, initial_settings.threshold == 90, None);
         settings_menu.append(&threshold_75)?;
         settings_menu.append(&threshold_80)?;
         settings_menu.append(&threshold_85)?;
@@ -124,14 +149,15 @@ impl TrayApp {
         let threshold_90_id = threshold_90.id().clone();
 
         let running = self.running.clone();
+        let settings = self.settings.clone();
         let mut last_update = std::time::Instant::now();
         let mut last_auto_optimize = std::time::Instant::now();
-        let auto_enabled = Arc::new(AtomicBool::new(true));
-        let game_mode_enabled = Arc::new(AtomicBool::new(true));
-        let focus_mode_enabled = Arc::new(AtomicBool::new(true));
-        let thermal_enabled = Arc::new(AtomicBool::new(true));
-        let preload_enabled = Arc::new(AtomicBool::new(true));
-        let current_threshold = Arc::new(AtomicU32::new(75));
+        let auto_enabled = Arc::new(AtomicBool::new(initial_settings.auto_optimize));
+        let game_mode_enabled = Arc::new(AtomicBool::new(initial_settings.ai_mode.game_mode));
+        let focus_mode_enabled = Arc::new(AtomicBool::new(initial_settings.ai_mode.focus_mode));
+        let thermal_enabled = Arc::new(AtomicBool::new(initial_settings.ai_mode.thermal_prediction));
+        let preload_enabled = Arc::new(AtomicBool::new(initial_settings.ai_mode.predictive_preload));
+        let current_threshold = Arc::new(AtomicU32::new(initial_settings.threshold));
         let last_usage = Arc::new(AtomicU32::new(initial_usage));
         let total_freed = Arc::new(AtomicU32::new(0));
 
@@ -187,15 +213,24 @@ impl TrayApp {
                     };
                     let _ = tray_icon.set_tooltip(Some(tooltip));
 
+                    // Check AI Mode conditions
+                    let game_active = game_mode_enabled.load(Ordering::SeqCst) && is_game_running();
+                    let focus_active = focus_mode_enabled.load(Ordering::SeqCst) && is_video_call_active();
+
+                    // Adjust behavior based on AI modes
+                    let should_skip = game_active; // Don't interrupt games
+                    let aggressive_mode = focus_active; // Be more aggressive during video calls
+
                     // Auto-optimize if enabled and conditions met
                     if auto_enabled.load(Ordering::SeqCst)
                         && usage > threshold
+                        && !should_skip
                         && last_auto_optimize.elapsed() > std::time::Duration::from_secs(AUTO_OPTIMIZE_INTERVAL)
                     {
                         let total_freed_clone = total_freed.clone();
                         std::thread::spawn(move || {
                             let optimizer = WindowsMemoryOptimizer::new();
-                            if let Ok(result) = optimizer.optimize(false) {
+                            if let Ok(result) = optimizer.optimize(aggressive_mode) {
                                 if result.freed_mb > 100.0 {
                                     let current = total_freed_clone.load(Ordering::SeqCst);
                                     total_freed_clone.store(current + result.freed_mb as u32, Ordering::SeqCst);
@@ -225,48 +260,88 @@ impl TrayApp {
                     open_github();
                 } else if event.id == auto_id {
                     let current = auto_enabled.load(Ordering::SeqCst);
-                    auto_enabled.store(!current, Ordering::SeqCst);
-                    let _ = auto_item.set_checked(!current);
+                    let new_val = !current;
+                    auto_enabled.store(new_val, Ordering::SeqCst);
+                    let _ = auto_item.set_checked(new_val);
+                    // Save setting
+                    if let Ok(mut s) = settings.lock() {
+                        s.auto_optimize = new_val;
+                        let _ = s.save();
+                    }
                 } else if event.id == game_mode_id {
                     let current = game_mode_enabled.load(Ordering::SeqCst);
-                    game_mode_enabled.store(!current, Ordering::SeqCst);
-                    let _ = game_mode_item.set_checked(!current);
+                    let new_val = !current;
+                    game_mode_enabled.store(new_val, Ordering::SeqCst);
+                    let _ = game_mode_item.set_checked(new_val);
+                    // Save setting and trigger AI mode update
+                    if let Ok(mut s) = settings.lock() {
+                        s.ai_mode.game_mode = new_val;
+                        let _ = s.save();
+                    }
+                    if new_val {
+                        tracing::info!("Game Mode enabled - will detect games and prioritize");
+                    }
                 } else if event.id == focus_mode_id {
                     let current = focus_mode_enabled.load(Ordering::SeqCst);
-                    focus_mode_enabled.store(!current, Ordering::SeqCst);
-                    let _ = focus_mode_item.set_checked(!current);
+                    let new_val = !current;
+                    focus_mode_enabled.store(new_val, Ordering::SeqCst);
+                    let _ = focus_mode_item.set_checked(new_val);
+                    // Save setting
+                    if let Ok(mut s) = settings.lock() {
+                        s.ai_mode.focus_mode = new_val;
+                        let _ = s.save();
+                    }
+                    if new_val {
+                        tracing::info!("Focus Mode enabled - will detect video calls");
+                    }
                 } else if event.id == thermal_id {
                     let current = thermal_enabled.load(Ordering::SeqCst);
-                    thermal_enabled.store(!current, Ordering::SeqCst);
-                    let _ = thermal_item.set_checked(!current);
+                    let new_val = !current;
+                    thermal_enabled.store(new_val, Ordering::SeqCst);
+                    let _ = thermal_item.set_checked(new_val);
+                    // Save setting
+                    if let Ok(mut s) = settings.lock() {
+                        s.ai_mode.thermal_prediction = new_val;
+                        let _ = s.save();
+                    }
                 } else if event.id == preload_id {
                     let current = preload_enabled.load(Ordering::SeqCst);
-                    preload_enabled.store(!current, Ordering::SeqCst);
-                    let _ = preload_item.set_checked(!current);
+                    let new_val = !current;
+                    preload_enabled.store(new_val, Ordering::SeqCst);
+                    let _ = preload_item.set_checked(new_val);
+                    // Save setting
+                    if let Ok(mut s) = settings.lock() {
+                        s.ai_mode.predictive_preload = new_val;
+                        let _ = s.save();
+                    }
                 } else if event.id == threshold_75_id {
                     current_threshold.store(75, Ordering::SeqCst);
                     let _ = threshold_75.set_checked(true);
                     let _ = threshold_80.set_checked(false);
                     let _ = threshold_85.set_checked(false);
                     let _ = threshold_90.set_checked(false);
+                    if let Ok(mut s) = settings.lock() { s.threshold = 75; let _ = s.save(); }
                 } else if event.id == threshold_80_id {
                     current_threshold.store(80, Ordering::SeqCst);
                     let _ = threshold_75.set_checked(false);
                     let _ = threshold_80.set_checked(true);
                     let _ = threshold_85.set_checked(false);
                     let _ = threshold_90.set_checked(false);
+                    if let Ok(mut s) = settings.lock() { s.threshold = 80; let _ = s.save(); }
                 } else if event.id == threshold_85_id {
                     current_threshold.store(85, Ordering::SeqCst);
                     let _ = threshold_75.set_checked(false);
                     let _ = threshold_80.set_checked(false);
                     let _ = threshold_85.set_checked(true);
                     let _ = threshold_90.set_checked(false);
+                    if let Ok(mut s) = settings.lock() { s.threshold = 85; let _ = s.save(); }
                 } else if event.id == threshold_90_id {
                     current_threshold.store(90, Ordering::SeqCst);
                     let _ = threshold_75.set_checked(false);
                     let _ = threshold_80.set_checked(false);
                     let _ = threshold_85.set_checked(false);
                     let _ = threshold_90.set_checked(true);
+                    if let Ok(mut s) = settings.lock() { s.threshold = 90; let _ = s.save(); }
                 }
             }
         })?;
@@ -462,4 +537,90 @@ impl Default for TrayApp {
     fn default() -> Self {
         Self::new()
     }
+}
+
+/// Check if a game is currently running (Game Mode)
+fn is_game_running() -> bool {
+    use sysinfo::{System, ProcessRefreshKind};
+
+    // Known game process names (lowercase for comparison)
+    const GAME_PROCESSES: &[&str] = &[
+        // Popular games
+        "valorant", "valorant-win64-shipping",
+        "csgo", "cs2",
+        "fortnite", "fortniteclient-win64-shipping",
+        "minecraft", "javaw", // Minecraft Java
+        "league of legends", "leagueclient",
+        "overwatch", "overwatch 2",
+        "apex_legends", "r5apex",
+        "pubg", "tslgame",
+        "gta5", "gtavlauncher",
+        "rdr2",
+        "cyberpunk2077",
+        "eldenring",
+        "hogwartslegacy",
+        "starfield",
+        "baldursgate3",
+        "diablo", "diablo iv",
+        "destiny2",
+        "warframe",
+        "rocketleague",
+        "dota2",
+        "steam_oculusvr", // VR games
+        // Game launchers (if in focus, likely gaming)
+        "epicgameslauncher",
+        "origin",
+        "battle.net",
+        "ubisoft connect",
+    ];
+
+    let mut system = System::new();
+    system.refresh_processes_specifics(ProcessRefreshKind::new());
+
+    for (_pid, process) in system.processes() {
+        let name = process.name().to_lowercase();
+        for game in GAME_PROCESSES {
+            if name.contains(game) {
+                tracing::debug!("Game detected: {}", name);
+                return true;
+            }
+        }
+    }
+
+    false
+}
+
+/// Check if a video call application is active (Focus Mode)
+fn is_video_call_active() -> bool {
+    use sysinfo::{System, ProcessRefreshKind};
+
+    // Video call applications
+    const VIDEO_CALL_PROCESSES: &[&str] = &[
+        "zoom",
+        "teams", "ms-teams",
+        "slack",
+        "discord",
+        "webex",
+        "gotomeeting",
+        "skype",
+        "facetime",
+        "google meet", // Usually runs in browser
+        "obs", "obs64", // Streaming/recording
+        "streamlabs",
+    ];
+
+    let mut system = System::new();
+    system.refresh_processes_specifics(ProcessRefreshKind::new());
+
+    for (_pid, process) in system.processes() {
+        let name = process.name().to_lowercase();
+        for app in VIDEO_CALL_PROCESSES {
+            if name.contains(app) {
+                tracing::debug!("Video call app detected: {}", name);
+                return true;
+            }
+        }
+    }
+
+    false
 }

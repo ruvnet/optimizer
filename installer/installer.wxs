@@ -18,7 +18,10 @@
 
     <Feature Id="MainApp" Title="RuVector MemOpt" Level="1">
       <ComponentGroupRef Id="ProductComponents" />
+      <ComponentGroupRef Id="TrayComponents" />
       <ComponentGroupRef Id="ServiceComponents" />
+      <ComponentRef Id="ApplicationShortcut" />
+      <ComponentRef Id="StartupEntry" />
     </Feature>
 
     <Directory Id="TARGETDIR" Name="SourceDir">
@@ -35,6 +38,12 @@
     <ComponentGroup Id="ProductComponents" Directory="INSTALLFOLDER">
       <Component Id="MainExecutable" Guid="*">
         <File Id="MainExe" Source="bin/ruvector-memopt.exe" KeyPath="yes"/>
+      </Component>
+    </ComponentGroup>
+
+    <ComponentGroup Id="TrayComponents" Directory="INSTALLFOLDER">
+      <Component Id="TrayExecutable" Guid="*">
+        <File Id="TrayExe" Source="bin/ruvector-memopt-tray.exe" KeyPath="yes"/>
       </Component>
     </ComponentGroup>
 
@@ -60,7 +69,7 @@
       </Component>
     </ComponentGroup>
 
-    <!-- Shortcut -->
+    <!-- Start Menu Shortcuts -->
     <DirectoryRef Id="ApplicationProgramsFolder">
       <Component Id="ApplicationShortcut" Guid="*">
         <Shortcut Id="AppShortcut"
@@ -68,9 +77,26 @@
                   Target="[INSTALLFOLDER]ruvector-memopt.exe"
                   Arguments="dashboard"
                   WorkingDirectory="INSTALLFOLDER"/>
+        <Shortcut Id="TrayShortcut"
+                  Name="RuVector MemOpt Tray"
+                  Description="Start system tray optimizer"
+                  Target="[INSTALLFOLDER]ruvector-memopt-tray.exe"
+                  WorkingDirectory="INSTALLFOLDER"/>
         <RemoveFolder Id="RemoveAppFolder" On="uninstall"/>
-        <RegistryValue Root="HKCU" Key="Software\RuVector\MemOpt" 
+        <RegistryValue Root="HKCU" Key="Software\RuVector\MemOpt"
                        Name="installed" Type="integer" Value="1" KeyPath="yes"/>
+      </Component>
+    </DirectoryRef>
+
+    <!-- Startup Entry (optional - runs tray on login) -->
+    <DirectoryRef Id="INSTALLFOLDER">
+      <Component Id="StartupEntry" Guid="*">
+        <RegistryValue Root="HKCU"
+                       Key="Software\Microsoft\Windows\CurrentVersion\Run"
+                       Name="RuVectorMemOpt"
+                       Type="string"
+                       Value="&quot;[INSTALLFOLDER]ruvector-memopt-tray.exe&quot;"
+                       KeyPath="yes"/>
       </Component>
     </DirectoryRef>
 
