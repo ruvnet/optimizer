@@ -951,6 +951,11 @@ impl LinuxDaemonService {
 // Helper Functions
 // ============================================================================
 
+/// Get the service unit name (e.g., "ruvector-memopt.service")
+fn service_unit_name() -> String {
+    format!("{}.service", SERVICE_NAME)
+}
+
 /// Run a systemctl command and return the result
 fn run_systemctl(args: &[&str]) -> Result<(), DaemonError> {
     let output = Command::new("systemctl")
