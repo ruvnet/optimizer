@@ -4,14 +4,14 @@ version = "0.3.1"
 edition = "2021"
 rust-version = "1.75"
 authors = ["ruv <ruvnet@users.noreply.github.com>"]
-description = "Intelligent Windows memory optimizer with neural learning capabilities for smart optimization decisions"
+description = "Intelligent cross-platform memory optimizer with neural learning capabilities for smart optimization decisions"
 license = "MIT"
 repository = "https://github.com/ruvnet/optimizer"
 homepage = "https://github.com/ruvnet/optimizer"
 documentation = "https://docs.rs/ruvector-memopt"
 readme = "README.md"
-keywords = ["memory", "optimizer", "windows", "neural", "performance"]
-categories = ["memory-management", "os::windows-apis", "command-line-utilities"]
+keywords = ["memory", "optimizer", "windows", "linux", "neural", "performance"]
+categories = ["memory-management", "command-line-utilities"]
 exclude = [
     "dist/*",
     "installer/*",
@@ -25,32 +25,25 @@ exclude = [
 default = []
 # AI Mode - GPU/VRAM monitoring, Ollama integration, resource bridging
 ai = ["reqwest", "dep:nvml-wrapper"]
-# NVML support for NVIDIA GPU monitoring
+# NVML support for NVIDIA GPU monitoring (works on both Windows and Linux)
 nvml = ["dep:nvml-wrapper"]
 # Full AI features including all integrations
 ai-full = ["ai", "nvml"]
+# Linux system tray support (optional, requires GTK/libappindicator)
+linux-tray = ["dep:tray-icon", "dep:winit", "dep:libappindicator"]
+# D-Bus notifications on Linux (optional)
+linux-dbus = ["dep:dbus"]
 
+# ============================================================================
+# Cross-platform dependencies
+# ============================================================================
 [dependencies]
 num_cpus = "1.16"
-# Windows APIs
-windows = { version = "0.58", features = [
-    "Win32_Foundation",
-    "Win32_System_Memory",
-    "Win32_System_ProcessStatus",
-    "Win32_System_Threading",
-    "Win32_System_SystemInformation",
-    "Win32_System_Diagnostics_ToolHelp",
-    "Win32_System_Console",
-    "Win32_Security",
-    "Win32_UI_Shell",
-    "Win32_UI_WindowsAndMessaging",
-    "Win32_Graphics_Dxgi",
-]}
 
 # HTTP client for AI runtime APIs (optional)
 reqwest = { version = "0.11", features = ["json"], optional = true }
 
-# NVIDIA Management Library (optional)
+# NVIDIA Management Library (optional, works on both Windows and Linux)
 nvml-wrapper = { version = "0.9", optional = true }
 
 # WASM runtime for RuVector
@@ -65,12 +58,8 @@ serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 toml = "0.8"
 
-# System tray
-tray-icon = "0.14"
-winit = { version = "0.30", features = ["rwh_06"] }
-
-# Windows service
-windows-service = "0.7"
+# System tray - moved to platform-specific sections
+# tray-icon requires GTK on Linux which may not be available
 
 # Logging
 tracing = "0.1"
@@ -83,6 +72,9 @@ clap = { version = "4.5", features = ["derive"] }
 sysinfo = "0.30"
 chrono = "0.4"
 
+# Cross-platform directories
+dirs = "5.0"
+
 # Neural/ML utilities
 ndarray = "0.15"
 rand = "0.8"
@@ -90,13 +82,58 @@ rand = "0.8"
 # IPC for service communication
 interprocess = "2.0"
 
+# ============================================================================
+# Windows-specific dependencies
+# ============================================================================
 [target.'cfg(windows)'.dependencies]
+# Windows APIs
+windows = { version = "0.58", features = [
+    "Win32_Foundation",
+    "Win32_System_Memory",
+    "Win32_System_ProcessStatus",
+    "Win32_System_Threading",
+    "Win32_System_SystemInformation",
+    "Win32_System_Diagnostics_ToolHelp",
+    "Win32_System_Console",
+    "Win32_Security",
+    "Win32_UI_Shell",
+    "Win32_UI_WindowsAndMessaging",
+    "Win32_Graphics_Dxgi",
+]}
 winapi = { version = "0.3", features = [
     "memoryapi", "psapi", "processthreadsapi",
     "sysinfoapi", "winbase", "winnt", "errhandlingapi"
 ]}
+# Windows service support
+windows-service = "0.7"
+# System tray (uses native Windows APIs, no GTK needed)
+tray-icon = "0.14"
+winit = { version = "0.30", features = ["rwh_06"] }
 
-[build-dependencies]
+# ============================================================================
+# Linux-specific dependencies
+# ============================================================================
+[target.'cfg(target_os = "linux")'.dependencies]
+# System calls and POSIX interfaces
+libc = "0.2"
+nix = { version = "0.28", features = ["signal", "process", "fs"] }
+# Signal handling for graceful shutdown
+signal-hook = "0.3"
+signal-hook-tokio = { version = "0.3", features = ["futures-v0_3"] }
+# Process management via /proc filesystem
+procfs = "0.16"
+# System tray (optional, requires GTK development libraries)
+tray-icon = { version = "0.14", optional = true }
+winit = { version = "0.30", features = ["rwh_06"], optional = true }
+# Linux tray support (optional, requires libappindicator)
+libappindicator = { version = "0.9", optional = true }
+# D-Bus for desktop notifications (optional)
+dbus = { version = "0.9", optional = true }
+
+# ============================================================================
+# Build dependencies (platform-specific)
+# ============================================================================
+[target.'cfg(windows)'.build-dependencies]
 embed-resource = "2.4"
 
 [[bin]]

@@ -1,7 +1,7 @@
 //! RuVector Memory Optimizer
 //!
-//! An intelligent memory optimizer for Windows that leverages RuVector neural
-//! capabilities for smart optimization decisions.
+//! An intelligent cross-platform memory optimizer that leverages RuVector neural
+//! capabilities for smart optimization decisions. Supports both Windows and Linux.
 //!
 //! ## Features
 //!
@@ -10,8 +10,13 @@
 //! - **Adaptive Strategy**: MinCut control for mode switching
 //! - **Anti-Forgetting**: EWC prevents losing good strategies
 //! - **Real-time Monitoring**: Live metrics dashboard
-//! - **Windows Service**: Background service support
+//! - **Cross-Platform**: Windows service and Linux daemon support
 //! - **Security**: Privilege management and input validation
+//!
+//! ## Platform Support
+//!
+//! - **Windows**: Win32 APIs for memory management, Windows Service support
+//! - **Linux**: /proc filesystem, madvise() syscalls, systemd integration
 //!
 //! ## Safety
 //!
@@ -29,7 +34,16 @@ pub mod security;
 pub mod algorithms;
 pub mod dashboard;
 
+// Platform-specific modules
+#[cfg(target_os = "linux")]
+pub mod platform;
+
 // Re-exports
+#[cfg(target_os = "linux")]
+pub use platform::linux::{
+    LinuxMemoryOptimizer, MemoryError as LinuxMemoryError, ProcessMemoryInfo as LinuxProcessMemoryInfo,
+    SystemMemoryInfo as LinuxSystemMemoryInfo,
+};
 pub use core::config::OptimizerConfig;
 pub use core::optimizer::IntelligentOptimizer;
 pub use neural::engine::NeuralDecisionEngine;

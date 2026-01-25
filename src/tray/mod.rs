@@ -1,32 +1,71 @@
 //! System tray icon and menu with automatic optimization and AI Mode settings
+//!
+//! This module is Windows-only by default. On Linux, it requires the `linux-tray` feature
+//! and appropriate GTK libraries installed.
 
 mod settings;
 pub use settings::{TraySettings, AIModeSettings};
 
-use crate::windows::memory::WindowsMemoryOptimizer;
+// The tray functionality requires platform-specific dependencies
+#[cfg(any(windows, feature = "linux-tray"))]
 use crate::accel::CpuCapabilities;
+#[cfg(any(windows, feature = "linux-tray"))]
 use std::sync::{Arc, Mutex, atomic::{AtomicBool, AtomicU32, Ordering}};
+#[cfg(any(windows, feature = "linux-tray"))]
 use tray_icon::{
     menu::{Menu, MenuEvent, MenuItem, CheckMenuItem, Submenu, PredefinedMenuItem},
     TrayIconBuilder, Icon,
 };
+#[cfg(any(windows, feature = "linux-tray"))]
 use winit::event_loop::{ControlFlow, EventLoop};
 
+// Windows-specific imports
+#[cfg(windows)]
+use crate::windows::memory::WindowsMemoryOptimizer;
+
 /// Auto-optimization threshold (optimize when memory usage exceeds this %)
+#[cfg(any(windows, feature = "linux-tray"))]
 pub const AUTO_OPTIMIZE_THRESHOLD: u32 = 75;
 /// Auto-optimization interval in seconds
+#[cfg(any(windows, feature = "linux-tray"))]
 pub const AUTO_OPTIMIZE_INTERVAL: u64 = 60;
 
 /// GitHub repository URL
+#[cfg(any(windows, feature = "linux-tray"))]
 const GITHUB_URL: &str = "https://github.com/ruvnet/optimizer";
 /// Version string
+#[cfg(any(windows, feature = "linux-tray"))]
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
+#[cfg(any(windows, feature = "linux-tray"))]
 pub struct TrayApp {
     running: Arc<AtomicBool>,
     settings: Arc<Mutex<TraySettings>>,
 }
 
+/// Stub TrayApp for platforms without tray support
+#[cfg(not(any(windows, feature = "linux-tray")))]
+pub struct TrayApp;
+
+#[cfg(not(any(windows, feature = "linux-tray")))]
+impl TrayApp {
+    pub fn new() -> Self {
+        Self
+    }
+
+    pub fn run(&self) -> Result<(), Box<dyn std::error::Error>> {
+        Err("System tray not supported on this platform. Use CLI mode instead.".into())
+    }
+}
+
+#[cfg(not(any(windows, feature = "linux-tray")))]
+impl Default for TrayApp {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+#[cfg(any(windows, feature = "linux-tray"))]
 impl TrayApp {
     pub fn new() -> Self {
         // Load persisted settings
@@ -39,6 +78,7 @@ impl TrayApp {
         }
     }
 
+    #[cfg(windows)]
     pub fn run(&self) -> Result<(), Box<dyn std::error::Error>> {
         let event_loop = EventLoop::new()?;
 
@@ -350,6 +390,7 @@ impl TrayApp {
     }
 }
 
+#[cfg(windows)]
 fn build_mode_string(game: bool, focus: bool) -> String {
     let mut modes = Vec::new();
     if game { modes.push("Game"); }
@@ -361,6 +402,7 @@ fn build_mode_string(game: bool, focus: bool) -> String {
     }
 }
 
+#[cfg(windows)]
 fn get_memory_status_text() -> String {
     if let Ok(status) = WindowsMemoryOptimizer::get_memory_status() {
         format!(
@@ -374,6 +416,7 @@ fn get_memory_status_text() -> String {
     }
 }
 
+#[cfg(windows)]
 fn run_optimization(aggressive: bool, total_freed: Arc<AtomicU32>) {
     std::thread::spawn(move || {
         let optimizer = WindowsMemoryOptimizer::new();
@@ -395,6 +438,7 @@ fn run_optimization(aggressive: bool, total_freed: Arc<AtomicU32>) {
     });
 }
 
+#[cfg(windows)]
 fn show_cpu_info() {
     let caps = CpuCapabilities::detect();
     let msg = format!(
@@ -420,6 +464,7 @@ fn show_cpu_info() {
     show_message_box("System Information", &msg);
 }
 
+#[cfg(windows)]
 fn open_github() {
     #[cfg(windows)]
     {
@@ -429,8 +474,8 @@ fn open_github() {
     }
 }
 
-fn show_message_box(title: &str, message: &str) {
-    #[cfg(windows)]
+#[cfg(windows)]
+fn show_message_box(_title: &str, _message: &str) {
     {
         use std::ffi::OsStr;
         use std::os::windows::ffi::OsStrExt;
@@ -456,6 +501,7 @@ fn show_message_box(title: &str, message: &str) {
 }
 
 /// Create icon with specific memory usage percentage for color coding
+#[cfg(windows)]
 fn create_icon_with_usage(usage_percent: u32) -> Vec<u8> {
     let mut data = Vec::with_capacity(32 * 32 * 4);
 
@@ -533,6 +579,7 @@ fn create_icon_with_usage(usage_percent: u32) -> Vec<u8> {
     data
 }
 
+#[cfg(any(windows, feature = "linux-tray"))]
 impl Default for TrayApp {
     fn default() -> Self {
         Self::new()
@@ -540,6 +587,7 @@ impl Default for TrayApp {
 }
 
 /// Check if a game is currently running (Game Mode)
+#[cfg(windows)]
 fn is_game_running() -> bool {
     use sysinfo::{System, ProcessRefreshKind};
 
@@ -591,6 +639,7 @@ fn is_game_running() -> bool {
 }
 
 /// Check if a video call application is active (Focus Mode)
+#[cfg(windows)]
 fn is_video_call_active() -> bool {
     use sysinfo::{System, ProcessRefreshKind};
 
