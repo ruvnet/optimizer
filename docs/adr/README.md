@@ -2,10 +2,18 @@
 
 ## Index
 
-| ADR | Title | Status | Date |
-|-----|-------|--------|------|
-| [ADR-001](ADR-001-ai-mode.md) | AI Mode - LLM and GPU/CPU Optimization | Proposed | 2024-01-24 |
-| [ADR-002](ADR-002-resource-bridge.md) | Unified Resource Bridge | Proposed | 2024-01-24 |
+| ADR | Title | Status | Priority |
+|-----|-------|--------|----------|
+| [ADR-001](ADR-001-ai-mode.md) | AI Mode - LLM and GPU/CPU Optimization | Proposed | Critical |
+| [ADR-002](ADR-002-resource-bridge.md) | Unified Resource Bridge | Proposed | High |
+| [ADR-003](ADR-003-behavioral-fingerprint.md) | Behavioral Fingerprint Authentication | Proposed | High |
+| [ADR-004](ADR-004-malware-radar.md) | Malware Radar - Anomaly Detection | Proposed | Critical |
+| [ADR-005](ADR-005-flow-state-detector.md) | Flow State Detection & Productivity | Proposed | High |
+| [ADR-006](ADR-006-frame-drop-oracle.md) | Frame Drop Oracle - Gaming Optimization | Proposed | High |
+| [ADR-007](ADR-007-hive-mind-swarm.md) | Hive Mind - Distributed Multi-PC Swarm | Proposed | Medium |
+| [ADR-008](ADR-008-llm-inference-optimizer.md) | LLM Inference Optimizer | Proposed | Critical |
+| [ADR-009](ADR-009-memory-music.md) | Memory Music - Generative Audio | Proposed | Low |
+| [ADR-010](ADR-010-data-export-training.md) | Data Export & Training Pipeline | Proposed | High |
 
 ## Overview
 
