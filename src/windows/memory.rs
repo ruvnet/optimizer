@@ -45,10 +45,31 @@ impl WindowsMemoryOptimizer {
     fn check_admin() -> bool {
         #[cfg(windows)]
         {
-            std::process::Command::new("net").args(["session"])
-                .stdout(std::process::Stdio::null())
-                .stderr(std::process::Stdio::null())
-                .status().map(|s| s.success()).unwrap_or(false)
+            // Use Windows API to check admin - no console window!
+            use windows::Win32::Security::{GetTokenInformation, TokenElevation, TOKEN_ELEVATION, TOKEN_QUERY};
+            use windows::Win32::System::Threading::{GetCurrentProcess, OpenProcessToken};
+            use windows::Win32::Foundation::CloseHandle;
+            use std::mem::{size_of, MaybeUninit};
+
+            unsafe {
+                let mut token = MaybeUninit::uninit();
+                if OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, token.as_mut_ptr()).is_err() {
+                    return false;
+                }
+                let token = token.assume_init();
+
+                let mut elevation = TOKEN_ELEVATION::default();
+                let mut size = 0u32;
+                let result = GetTokenInformation(
+                    token,
+                    TokenElevation,
+                    Some(&mut elevation as *mut _ as *mut _),
+                    size_of::<TOKEN_ELEVATION>() as u32,
+                    &mut size,
+                );
+                let _ = CloseHandle(token);
+                result.is_ok() && elevation.TokenIsElevated != 0
+            }
         }
         #[cfg(not(windows))]
         { false }

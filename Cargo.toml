@@ -111,6 +111,10 @@ path = "src/service/main.rs"
 name = "ruvector-memopt-tray"
 path = "src/tray_main.rs"
 
+[[bin]]
+name = "RuVectorTray"
+path = "src/launcher.rs"
+
 [profile.release]
 opt-level = 3
 lto = true
