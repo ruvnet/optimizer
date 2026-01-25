@@ -4,14 +4,14 @@ version = "0.3.1"
 edition = "2021"
 rust-version = "1.75"
 authors = ["ruv <ruvnet@users.noreply.github.com>"]
-description = "Intelligent Windows memory optimizer with neural learning capabilities for smart optimization decisions"
+description = "Intelligent cross-platform memory optimizer with neural learning capabilities for smart optimization decisions"
 license = "MIT"
 repository = "https://github.com/ruvnet/optimizer"
 homepage = "https://github.com/ruvnet/optimizer"
 documentation = "https://docs.rs/ruvector-memopt"
 readme = "README.md"
-keywords = ["memory", "optimizer", "windows", "neural", "performance"]
-categories = ["memory-management", "os::windows-apis", "command-line-utilities"]
+keywords = ["memory", "optimizer", "cross-platform", "neural", "performance"]
+categories = ["memory-management", "command-line-utilities"]
 exclude = [
     "dist/*",
     "installer/*",
@@ -30,22 +30,11 @@ nvml = ["dep:nvml-wrapper"]
 # Full AI features including all integrations
 ai-full = ["ai", "nvml"]
 
+# =============================================================================
+# Cross-platform dependencies
+# =============================================================================
 [dependencies]
 num_cpus = "1.16"
-# Windows APIs
-windows = { version = "0.58", features = [
-    "Win32_Foundation",
-    "Win32_System_Memory",
-    "Win32_System_ProcessStatus",
-    "Win32_System_Threading",
-    "Win32_System_SystemInformation",
-    "Win32_System_Diagnostics_ToolHelp",
-    "Win32_System_Console",
-    "Win32_Security",
-    "Win32_UI_Shell",
-    "Win32_UI_WindowsAndMessaging",
-    "Win32_Graphics_Dxgi",
-]}
 
 # HTTP client for AI runtime APIs (optional)
 reqwest = { version = "0.11", features = ["json"], optional = true }
@@ -65,12 +54,9 @@ serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 toml = "0.8"
 
-# System tray
+# System tray (cross-platform)
 tray-icon = "0.14"
 winit = { version = "0.30", features = ["rwh_06"] }
-
-# Windows service
-windows-service = "0.7"
 
 # Logging
 tracing = "0.1"
@@ -90,13 +76,55 @@ rand = "0.8"
 # IPC for service communication
 interprocess = "2.0"
 
+# =============================================================================
+# Windows-specific dependencies
+# =============================================================================
 [target.'cfg(windows)'.dependencies]
+# Windows APIs (high-level)
+windows = { version = "0.58", features = [
+    "Win32_Foundation",
+    "Win32_System_Memory",
+    "Win32_System_ProcessStatus",
+    "Win32_System_Threading",
+    "Win32_System_SystemInformation",
+    "Win32_System_Diagnostics_ToolHelp",
+    "Win32_System_Console",
+    "Win32_Security",
+    "Win32_UI_Shell",
+    "Win32_UI_WindowsAndMessaging",
+    "Win32_Graphics_Dxgi",
+]}
+
+# Windows APIs (low-level)
 winapi = { version = "0.3", features = [
     "memoryapi", "psapi", "processthreadsapi",
     "sysinfoapi", "winbase", "winnt", "errhandlingapi"
 ]}
 
-[build-dependencies]
+# Windows service support
+windows-service = "0.7"
+
+# =============================================================================
+# macOS-specific dependencies
+# =============================================================================
+[target.'cfg(target_os = "macos")'.dependencies]
+# Cocoa framework bindings for macOS UI
+cocoa = "0.25"
+
+# Objective-C runtime bindings
+objc = "0.2"
+
+# Core Foundation types
+core-foundation = "0.9"
+
+# libc for low-level system calls (madvise, geteuid, etc.)
+libc = "0.2"
+
+# =============================================================================
+# Build dependencies (platform-specific)
+# =============================================================================
+[target.'cfg(windows)'.build-dependencies]
+# Embed Windows resources (manifest, icon)
 embed-resource = "2.4"
 
 [[bin]]

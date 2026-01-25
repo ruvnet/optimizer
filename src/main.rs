@@ -1,4 +1,4 @@
-//! RuVector Memory Optimizer - Intelligent memory management for Windows
+//! RuVector Memory Optimizer - Intelligent cross-platform memory management
 
 use clap::{Parser, Subcommand};
 use std::time::Duration;
@@ -6,7 +6,6 @@ use tracing::{info, Level};
 use tracing_subscriber::FmtSubscriber;
 
 mod core;
-mod windows;
 mod neural;
 mod bench;
 mod monitor;
@@ -14,15 +13,30 @@ mod accel;
 mod tray;
 mod algorithms;
 mod dashboard;
+mod platform;
+mod security;
+
+// Platform-specific module declarations
+#[cfg(target_os = "windows")]
+mod windows;
+
+#[cfg(target_os = "macos")]
+mod macos;
 
 use core::config::OptimizerConfig;
 use core::optimizer::IntelligentOptimizer;
-use windows::memory::WindowsMemoryOptimizer;
-use windows::safety::{SafetyConfig, SafetyGuard};
+use platform::MemoryOptimizer;
 use bench::runner::BenchmarkRunner;
 use bench::advanced::AdvancedBenchmarkRunner;
 use monitor::dashboard::render_dashboard;
 use dashboard::DashboardServer;
+
+// Platform-specific safety imports
+#[cfg(target_os = "windows")]
+use windows::safety::{SafetyConfig, SafetyGuard};
+
+#[cfg(target_os = "macos")]
+use macos::safety::{SafetyConfig, SafetyGuard};
 
 #[derive(Parser)]
 #[command(name = "ruvector-memopt")]
@@ -118,7 +132,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     
     match cli.command {
         Commands::Status => {
-            let status = WindowsMemoryOptimizer::get_memory_status()?;
+            let status = MemoryOptimizer::get_memory_status()?;
             println!("Memory Status:");
             println!("  Total:     {:.0} MB", status.total_physical_mb);
             println!("  Available: {:.0} MB", status.available_physical_mb);
@@ -142,7 +156,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 ..Default::default()
             });
             
-            let status = WindowsMemoryOptimizer::get_memory_status()?;
+            let status = MemoryOptimizer::get_memory_status()?;
             
             if let Err(e) = safety.check_safe(status.available_physical_mb) {
                 println!("Safety check failed: {}", e);
@@ -153,7 +167,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 println!("DRY RUN - No changes will be made");
             }
             
-            let optimizer = WindowsMemoryOptimizer::new();
+            let optimizer = MemoryOptimizer::new();
             let result = optimizer.optimize(aggressive)?;
             
             safety.record_attempt(result.freed_mb >= 0.0);
@@ -226,7 +240,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             let metrics = bench::metrics::BenchmarkMetrics::new();
             
             loop {
-                if let Ok(status) = WindowsMemoryOptimizer::get_memory_status() {
+                if let Ok(status) = MemoryOptimizer::get_memory_status() {
                     // Clear screen
                     print!("\x1B[2J\x1B[1;1H");
                     println!("{}", render_dashboard(&status, &metrics.summary()));
@@ -355,7 +369,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             let mut analyzer = algorithms::SpectralAnalyzer::new(duration as usize);
 
             for i in 0..duration {
-                if let Ok(status) = WindowsMemoryOptimizer::get_memory_status() {
+                if let Ok(status) = MemoryOptimizer::get_memory_status() {
                     let usage = status.memory_load_percent as f64 / 100.0;
                     analyzer.add_sample(usage);
 

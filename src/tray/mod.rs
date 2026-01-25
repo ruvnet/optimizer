@@ -3,7 +3,7 @@
 mod settings;
 pub use settings::{TraySettings, AIModeSettings};
 
-use crate::windows::memory::WindowsMemoryOptimizer;
+use crate::platform::MemoryOptimizer;
 use crate::accel::CpuCapabilities;
 use std::sync::{Arc, Mutex, atomic::{AtomicBool, AtomicU32, Ordering}};
 use tray_icon::{
@@ -118,7 +118,7 @@ impl TrayApp {
         menu.append(&quit_item)?;
 
         // Get initial memory usage for icon
-        let initial_usage = WindowsMemoryOptimizer::get_memory_status()
+        let initial_usage = MemoryOptimizer::get_memory_status()
             .map(|s| s.memory_load_percent)
             .unwrap_or(50);
 
@@ -170,7 +170,7 @@ impl TrayApp {
 
             // Update status and check for auto-optimization every 5 seconds
             if last_update.elapsed() > std::time::Duration::from_secs(5) {
-                if let Ok(status) = WindowsMemoryOptimizer::get_memory_status() {
+                if let Ok(status) = MemoryOptimizer::get_memory_status() {
                     let usage = status.memory_load_percent;
                     last_usage.store(usage, Ordering::SeqCst);
 
@@ -229,7 +229,7 @@ impl TrayApp {
                     {
                         let total_freed_clone = total_freed.clone();
                         std::thread::spawn(move || {
-                            let optimizer = WindowsMemoryOptimizer::new();
+                            let optimizer = MemoryOptimizer::new();
                             if let Ok(result) = optimizer.optimize(aggressive_mode) {
                                 if result.freed_mb > 100.0 {
                                     let current = total_freed_clone.load(Ordering::SeqCst);
@@ -362,7 +362,7 @@ fn build_mode_string(game: bool, focus: bool) -> String {
 }
 
 fn get_memory_status_text() -> String {
-    if let Ok(status) = WindowsMemoryOptimizer::get_memory_status() {
+    if let Ok(status) = MemoryOptimizer::get_memory_status() {
         format!(
             "Memory: {:.0}% ({:.1}/{:.1} GB)",
             status.memory_load_percent,
@@ -376,7 +376,7 @@ fn get_memory_status_text() -> String {
 
 fn run_optimization(aggressive: bool, total_freed: Arc<AtomicU32>) {
     std::thread::spawn(move || {
-        let optimizer = WindowsMemoryOptimizer::new();
+        let optimizer = MemoryOptimizer::new();
         match optimizer.optimize(aggressive) {
             Ok(result) => {
                 let current = total_freed.load(Ordering::SeqCst);
@@ -421,16 +421,23 @@ fn show_cpu_info() {
 }
 
 fn open_github() {
-    #[cfg(windows)]
+    #[cfg(target_os = "windows")]
     {
         let _ = std::process::Command::new("cmd")
             .args(["/C", "start", GITHUB_URL])
             .spawn();
     }
+
+    #[cfg(target_os = "macos")]
+    {
+        let _ = std::process::Command::new("open")
+            .arg(GITHUB_URL)
+            .spawn();
+    }
 }
 
 fn show_message_box(title: &str, message: &str) {
-    #[cfg(windows)]
+    #[cfg(target_os = "windows")]
     {
         use std::ffi::OsStr;
         use std::os::windows::ffi::OsStrExt;
@@ -452,6 +459,19 @@ fn show_message_box(title: &str, message: &str) {
                 windows::Win32::UI::WindowsAndMessaging::MB_ICONINFORMATION,
             );
         }
+    }
+
+    #[cfg(target_os = "macos")]
+    {
+        // Use osascript to display a native macOS dialog
+        let script = format!(
+            r#"display dialog "{}" with title "{}" buttons {{"OK"}} default button "OK""#,
+            message.replace('"', r#"\""#).replace('\n', r#"\n"#),
+            title.replace('"', r#"\""#)
+        );
+        let _ = std::process::Command::new("osascript")
+            .args(["-e", &script])
+            .spawn();
     }
 }
 
