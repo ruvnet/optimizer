@@ -3,7 +3,7 @@
 //! This module provides memory monitoring and optimization for macOS systems.
 //! It mirrors the Windows API but uses macOS-appropriate mechanisms:
 //!
-//! - `sysinfo` crate for basic memory statistics (cross-platform)
+//! - Native Mach APIs (`host_statistics64`) for accurate memory statistics
 //! - `madvise` for memory hints (MADV_FREE, MADV_DONTNEED)
 //! - `purge` command for disk cache clearing (requires root)
 //! - Memory pressure level detection
@@ -35,8 +35,10 @@
 //! ```
 
 use std::time::Instant;
-use sysinfo::System;
 use tracing::{debug, info, warn};
+
+#[cfg(target_os = "macos")]
+use std::mem::MaybeUninit;
 
 /// Memory status information for macOS
 ///
@@ -108,6 +110,39 @@ pub struct OptimizationResult {
     pub duration_ms: u64,
 }
 
+/// VM statistics structure matching mach/vm_statistics.h
+/// IMPORTANT: natural_t is 32-bit (unsigned int) on macOS, even on 64-bit systems
+/// The structure has a mix of natural_t (u32) and uint64_t (u64) fields
+#[cfg(target_os = "macos")]
+#[repr(C)]
+#[derive(Debug, Default)]
+struct VmStatistics64 {
+    free_count: u32,           // natural_t
+    active_count: u32,         // natural_t
+    inactive_count: u32,       // natural_t
+    wire_count: u32,           // natural_t
+    zero_fill_count: u64,      // uint64_t
+    reactivations: u64,        // uint64_t
+    pageins: u64,              // uint64_t
+    pageouts: u64,             // uint64_t
+    faults: u64,               // uint64_t
+    cow_faults: u64,           // uint64_t
+    lookups: u64,              // uint64_t
+    hits: u64,                 // uint64_t
+    purges: u64,               // uint64_t
+    purgeable_count: u32,      // natural_t
+    speculative_count: u32,    // natural_t
+    decompressions: u64,       // uint64_t
+    compressions: u64,         // uint64_t
+    swapins: u64,              // uint64_t
+    swapouts: u64,             // uint64_t
+    compressor_page_count: u32, // natural_t
+    throttled_count: u32,      // natural_t
+    external_page_count: u32,  // natural_t
+    internal_page_count: u32,  // natural_t
+    total_uncompressed_pages_in_compressor: u64, // uint64_t
+}
+
 /// macOS Memory Optimizer
 ///
 /// Provides memory monitoring and optimization capabilities for macOS.
@@ -150,40 +185,161 @@ impl MacOSMemoryOptimizer {
         false
     }
 
-    /// Get current memory status
+    /// Get current memory status using native macOS Mach APIs
     ///
-    /// Uses the `sysinfo` crate for cross-platform memory statistics.
-    /// On macOS, this queries the kernel via sysctl for accurate data.
+    /// Uses `host_statistics64` with `HOST_VM_INFO64` for accurate memory data.
+    /// This provides more reliable results than cross-platform libraries on macOS.
+    ///
+    /// Available memory is calculated as: free + inactive + speculative + purgeable
+    /// This matches what Activity Monitor shows as "Memory Available".
     ///
     /// # Returns
     /// - `Ok(MemoryStatus)` - Current memory statistics
     /// - `Err(String)` - Error message if query fails
+    #[cfg(target_os = "macos")]
     pub fn get_memory_status() -> Result<MemoryStatus, String> {
-        let mut sys = System::new();
-        sys.refresh_memory();
+        // Get total physical memory via sysctl
+        let total_bytes = Self::get_total_memory_bytes()?;
+        let total_mb = total_bytes as f64 / 1024.0 / 1024.0;
 
-        let total = sys.total_memory() as f64 / 1024.0 / 1024.0;
-        let avail = sys.available_memory() as f64 / 1024.0 / 1024.0;
-        let load = if total > 0.0 {
-            (((total - avail) / total) * 100.0) as u32
+        // Get VM statistics via Mach API
+        let vm_stats = Self::get_vm_statistics()?;
+        let page_size = Self::get_page_size()? as u64;
+
+        // Calculate memory values in bytes (counts are u32, need to cast to u64 before multiply)
+        let free_bytes = (vm_stats.free_count as u64) * page_size;
+        let inactive_bytes = (vm_stats.inactive_count as u64) * page_size;
+        let speculative_bytes = (vm_stats.speculative_count as u64) * page_size;
+        let purgeable_bytes = (vm_stats.purgeable_count as u64) * page_size;
+
+        // Available = free + inactive + speculative + purgeable
+        // This matches Activity Monitor's "Memory Available" calculation
+        let available_bytes = free_bytes + inactive_bytes + speculative_bytes + purgeable_bytes;
+        let available_mb = available_bytes as f64 / 1024.0 / 1024.0;
+
+        let load = if total_mb > 0.0 {
+            (((total_mb - available_mb) / total_mb) * 100.0).round() as u32
         } else {
             0
         };
 
-        // On macOS, swap is used instead of page file
-        let swap_total = sys.total_swap() as f64 / 1024.0 / 1024.0;
-        let swap_used = sys.used_swap() as f64 / 1024.0 / 1024.0;
+        // Get swap info
+        let (swap_total, swap_used) = Self::get_swap_info();
         let swap_free = swap_total - swap_used;
 
+        debug!(
+            "Memory: total={:.0}MB, avail={:.0}MB (free={:.0}MB, inactive={:.0}MB, spec={:.0}MB, purg={:.0}MB), load={}%",
+            total_mb,
+            available_mb,
+            free_bytes as f64 / 1024.0 / 1024.0,
+            inactive_bytes as f64 / 1024.0 / 1024.0,
+            speculative_bytes as f64 / 1024.0 / 1024.0,
+            purgeable_bytes as f64 / 1024.0 / 1024.0,
+            load
+        );
+
         Ok(MemoryStatus {
-            total_physical_mb: total,
-            available_physical_mb: avail,
+            total_physical_mb: total_mb,
+            available_physical_mb: available_mb,
             memory_load_percent: load,
             total_page_file_mb: swap_total,
             available_page_file_mb: swap_free,
-            total_virtual_mb: total + swap_total,
-            available_virtual_mb: avail + swap_free,
+            total_virtual_mb: total_mb + swap_total,
+            available_virtual_mb: available_mb + swap_free,
         })
+    }
+
+    #[cfg(not(target_os = "macos"))]
+    pub fn get_memory_status() -> Result<MemoryStatus, String> {
+        Err("Not supported on this platform".to_string())
+    }
+
+    /// Get total physical memory in bytes using sysctl
+    #[cfg(target_os = "macos")]
+    fn get_total_memory_bytes() -> Result<u64, String> {
+        use std::ptr;
+
+        let mut size: libc::size_t = std::mem::size_of::<u64>();
+        let mut memsize: u64 = 0;
+        let mut mib: [libc::c_int; 2] = [libc::CTL_HW, libc::HW_MEMSIZE];
+
+        let result = unsafe {
+            libc::sysctl(
+                mib.as_mut_ptr(),
+                2,
+                &mut memsize as *mut u64 as *mut libc::c_void,
+                &mut size,
+                ptr::null_mut(),
+                0,
+            )
+        };
+
+        if result == 0 {
+            Ok(memsize)
+        } else {
+            Err("Failed to get total memory via sysctl".to_string())
+        }
+    }
+
+    /// Get VM statistics using Mach host_statistics64
+    #[cfg(target_os = "macos")]
+    fn get_vm_statistics() -> Result<VmStatistics64, String> {
+        // Mach constants
+        const HOST_VM_INFO64: libc::c_int = 4;
+        const HOST_VM_INFO64_COUNT: u32 =
+            (std::mem::size_of::<VmStatistics64>() / std::mem::size_of::<i32>()) as u32;
+
+        extern "C" {
+            fn mach_host_self() -> u32;
+            fn host_statistics64(
+                host: u32,
+                flavor: libc::c_int,
+                info: *mut VmStatistics64,
+                count: *mut u32,
+            ) -> i32;
+        }
+
+        let mut stats: MaybeUninit<VmStatistics64> = MaybeUninit::uninit();
+        let mut count: u32 = HOST_VM_INFO64_COUNT;
+
+        let result = unsafe {
+            host_statistics64(
+                mach_host_self(),
+                HOST_VM_INFO64,
+                stats.as_mut_ptr(),
+                &mut count,
+            )
+        };
+
+        if result == 0 {
+            Ok(unsafe { stats.assume_init() })
+        } else {
+            Err(format!("host_statistics64 failed with error: {}", result))
+        }
+    }
+
+    /// Get page size using sysconf
+    #[cfg(target_os = "macos")]
+    fn get_page_size() -> Result<usize, String> {
+        let page_size = unsafe { libc::sysconf(libc::_SC_PAGESIZE) };
+        if page_size > 0 {
+            Ok(page_size as usize)
+        } else {
+            // Default to 16KB for Apple Silicon, 4KB for Intel
+            Ok(16384)
+        }
+    }
+
+    /// Get swap info using sysinfo crate (swap detection is reliable)
+    #[cfg(target_os = "macos")]
+    fn get_swap_info() -> (f64, f64) {
+        use sysinfo::System;
+        let mut sys = System::new();
+        sys.refresh_memory();
+
+        let swap_total = sys.total_swap() as f64 / 1024.0 / 1024.0;
+        let swap_used = sys.used_swap() as f64 / 1024.0 / 1024.0;
+        (swap_total, swap_used)
     }
 
     /// Trim working set for a specific process
