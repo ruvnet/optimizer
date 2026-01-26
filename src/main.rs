@@ -58,6 +58,10 @@ enum Commands {
 
         #[arg(long)]
         dry_run: bool,
+
+        /// Override safety floor (use with caution on low-memory systems)
+        #[arg(long)]
+        force: bool,
     },
 
     /// Start continuous optimization daemon
@@ -145,21 +149,34 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             );
         }
         
-        Commands::Optimize { aggressive, dry_run } => {
+        Commands::Optimize { aggressive, dry_run, force } => {
             let config = OptimizerConfig {
                 aggressive_mode: aggressive,
                 ..Default::default()
             };
-            
+
+            // Lower safety floor to 128MB when --force is used (for low-memory systems)
+            let min_available = if force { 128.0 } else { 1024.0 };
+
             let mut safety = SafetyGuard::new(SafetyConfig {
                 dry_run,
+                min_available_mb: min_available,
                 ..Default::default()
             });
-            
+
             let status = MemoryOptimizer::get_memory_status()?;
-            
+
+            if force && status.available_physical_mb < 1024.0 {
+                println!("⚠️  WARNING: Running with --force on low memory ({:.0}MB available)",
+                    status.available_physical_mb);
+                println!("   System may become unresponsive. Close apps if needed.\n");
+            }
+
             if let Err(e) = safety.check_safe(status.available_physical_mb) {
                 println!("Safety check failed: {}", e);
+                if !force {
+                    println!("Tip: Use --force to override (use with caution)");
+                }
                 return Ok(());
             }
             
