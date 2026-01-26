@@ -11,7 +11,7 @@ use super::data::{
     ProcessInfo,
 };
 use crate::algorithms::{MinCutClusterer, ProcessPageRank, CountMinSketch, SpectralAnalyzer};
-use crate::windows::memory::WindowsMemoryOptimizer;
+use crate::platform::MemoryOptimizer;
 
 /// Dashboard server state
 pub struct DashboardServer {
@@ -42,7 +42,7 @@ impl DashboardServer {
         system.refresh_all();
 
         // Get memory status
-        let status = WindowsMemoryOptimizer::get_memory_status()?;
+        let status = MemoryOptimizer::get_memory_status()?;
 
         // Update spectral analyzer
         let spectral_state = {

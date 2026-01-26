@@ -1,6 +1,6 @@
 //! Simple text-based dashboard
 
-use crate::windows::memory::MemoryStatus;
+use crate::platform::MemoryStatus;
 use crate::bench::metrics::MetricsSummary;
 
 pub fn render_dashboard(status: &MemoryStatus, metrics: &MetricsSummary) -> String {

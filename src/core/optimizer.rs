@@ -11,7 +11,7 @@ use super::config::OptimizerConfig;
 use super::patterns::MemoryPattern;
 use super::process_scorer::ProcessScorer;
 use crate::neural::engine::NeuralDecisionEngine;
-use crate::windows::memory::{MemoryStatus, OptimizationResult, WindowsMemoryOptimizer};
+use crate::platform::{MemoryStatus, OptimizationResult, MemoryOptimizer};
 use crate::bench::metrics::{BenchmarkMetrics, OptimizationMetrics};
 
 /// Decision from neural engine
@@ -27,7 +27,7 @@ pub struct OptimizationDecision {
 /// Intelligent memory optimizer with neural decision making
 pub struct IntelligentOptimizer {
     config: OptimizerConfig,
-    windows_opt: WindowsMemoryOptimizer,
+    platform_opt: MemoryOptimizer,
     neural_engine: Option<Arc<RwLock<NeuralDecisionEngine>>>,
     process_scorer: ProcessScorer,
     last_optimization: Option<Instant>,
@@ -37,8 +37,8 @@ pub struct IntelligentOptimizer {
 impl IntelligentOptimizer {
     /// Create a new intelligent optimizer
     pub fn new(config: OptimizerConfig) -> Self {
-        let windows_opt = WindowsMemoryOptimizer::new();
-        
+        let platform_opt = MemoryOptimizer::new();
+
         let neural_engine = if config.neural_enabled {
             match NeuralDecisionEngine::new(&config) {
                 Ok(engine) => Some(Arc::new(RwLock::new(engine))),
@@ -50,10 +50,10 @@ impl IntelligentOptimizer {
         } else {
             None
         };
-        
+
         Self {
             config,
-            windows_opt,
+            platform_opt,
             neural_engine,
             process_scorer: ProcessScorer::new(),
             last_optimization: None,
@@ -63,7 +63,7 @@ impl IntelligentOptimizer {
     
     /// Check current memory pressure and make optimization decision
     pub async fn evaluate(&self) -> Result<OptimizationDecision, String> {
-        let status = WindowsMemoryOptimizer::get_memory_status()?;
+        let status = MemoryOptimizer::get_memory_status()?;
         let pattern = MemoryPattern::from_status(&status);
         
         // Check minimum interval
@@ -135,8 +135,8 @@ impl IntelligentOptimizer {
         info!("Starting optimization (aggressive={}): {}", 
             decision.aggressive, decision.reason);
         
-        // Execute Windows optimization
-        let result = self.windows_opt.optimize(decision.aggressive)?;
+        // Execute platform optimization
+        let result = self.platform_opt.optimize(decision.aggressive)?;
         
         // Record metrics
         let opt_metrics = OptimizationMetrics {
@@ -175,7 +175,7 @@ impl IntelligentOptimizer {
         // Force aggressive optimization on startup
         let decision = OptimizationDecision {
             should_optimize: true,
-            aggressive: self.windows_opt.has_admin_privileges(),
+            aggressive: self.platform_opt.has_admin_privileges(),
             confidence: 1.0,
             reason: "Startup optimization".into(),
             target_processes: vec![],

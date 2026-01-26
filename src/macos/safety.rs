@@ -263,7 +263,10 @@ mod tests {
 
     #[test]
     fn test_consecutive_failures() {
-        let mut guard = SafetyGuard::new(SafetyConfig::default());
+        // Use zero interval to test consecutive failures without rate limiting
+        let mut config = SafetyConfig::default();
+        config.min_interval = Duration::from_secs(0);
+        let mut guard = SafetyGuard::new(config);
 
         // Record failures
         guard.record_attempt(false);

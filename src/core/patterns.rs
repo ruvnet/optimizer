@@ -1,7 +1,7 @@
 //! Memory pattern representation for neural learning
 
 use chrono::{Datelike, Timelike};
-use crate::windows::memory::MemoryStatus;
+use crate::platform::MemoryStatus;
 use serde::{Deserialize, Serialize};
 
 /// Memory pattern vector for HNSW indexing

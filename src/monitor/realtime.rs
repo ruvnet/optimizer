@@ -3,7 +3,7 @@
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::RwLock;
-use crate::windows::memory::{MemoryStatus, WindowsMemoryOptimizer};
+use crate::platform::{MemoryStatus, MemoryOptimizer};
 
 pub struct RealtimeMonitor {
     interval: Duration,
@@ -28,7 +28,7 @@ impl RealtimeMonitor {
     
     pub async fn start(&self) {
         loop {
-            if let Ok(status) = WindowsMemoryOptimizer::get_memory_status() {
+            if let Ok(status) = MemoryOptimizer::get_memory_status() {
                 let snapshot = MemorySnapshot {
                     timestamp: chrono::Local::now(),
                     status,

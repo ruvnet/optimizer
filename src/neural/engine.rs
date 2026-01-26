@@ -7,7 +7,7 @@ use tracing::{debug, info};
 use crate::core::config::OptimizerConfig;
 use crate::core::optimizer::OptimizationDecision;
 use crate::core::patterns::{MemoryPattern, LabeledPattern};
-use crate::windows::memory::{MemoryStatus, OptimizationResult};
+use crate::platform::{MemoryStatus, OptimizationResult};
 
 use super::hnsw_patterns::PatternIndex;
 use super::ewc_learner::EWCLearner;

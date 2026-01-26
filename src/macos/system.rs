@@ -61,12 +61,19 @@ pub fn get_system_info() -> SystemInfo {
     let mut sys = System::new_all();
     sys.refresh_all();
 
+    // Calculate average CPU usage across all cores
+    let cpu_usage = if sys.cpus().is_empty() {
+        0.0
+    } else {
+        sys.cpus().iter().map(|c| c.cpu_usage()).sum::<f32>() / sys.cpus().len() as f32
+    };
+
     SystemInfo {
         os_name: System::name().unwrap_or_else(|| "macOS".to_string()),
         kernel_version: System::kernel_version().unwrap_or_default(),
         host_name: System::host_name().unwrap_or_default(),
         cpu_count: sys.cpus().len(),
-        cpu_usage: sys.global_cpu_usage(),
+        cpu_usage,
         total_memory_mb: sys.total_memory() / 1024 / 1024,
         used_memory_mb: sys.used_memory() / 1024 / 1024,
     }
