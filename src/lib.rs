@@ -1,6 +1,6 @@
 //! RuVector Memory Optimizer
 //!
-//! An intelligent memory optimizer for Windows that leverages RuVector neural
+//! An intelligent cross-platform memory optimizer that leverages RuVector neural
 //! capabilities for smart optimization decisions.
 //!
 //! ## Features
@@ -10,7 +10,7 @@
 //! - **Adaptive Strategy**: MinCut control for mode switching
 //! - **Anti-Forgetting**: EWC prevents losing good strategies
 //! - **Real-time Monitoring**: Live metrics dashboard
-//! - **Windows Service**: Background service support
+//! - **Cross-Platform**: Windows and macOS support
 //! - **Security**: Privilege management and input validation
 //!
 //! ## Safety
@@ -21,24 +21,41 @@
 //! - Dry-run mode for testing
 
 pub mod core;
-pub mod windows;
 pub mod neural;
 pub mod bench;
 pub mod monitor;
 pub mod security;
 pub mod algorithms;
 pub mod dashboard;
+pub mod platform;
 
-// Re-exports
+// Platform-specific modules
+#[cfg(target_os = "windows")]
+pub mod windows;
+
+#[cfg(target_os = "macos")]
+pub mod macos;
+
+// Re-exports - core functionality
 pub use core::config::OptimizerConfig;
 pub use core::optimizer::IntelligentOptimizer;
 pub use neural::engine::NeuralDecisionEngine;
 pub use monitor::realtime::RealtimeMonitor;
-pub use windows::safety::{SafetyConfig, SafetyGuard};
 pub use security::privileges::PrivilegeManager;
 pub use algorithms::{MinCutClusterer, ProcessPageRank, CountMinSketch, SpectralAnalyzer};
 pub use bench::{AdvancedBenchmarkRunner, BenchmarkSuite};
 pub use dashboard::{DashboardServer, DashboardData};
+
+// Platform-agnostic re-exports for safety types
+#[cfg(target_os = "windows")]
+pub use windows::safety::{SafetyConfig, SafetyGuard, SafetyStats};
+
+#[cfg(target_os = "macos")]
+pub use macos::safety::{SafetyConfig, SafetyGuard, SafetyStats};
+
+// Platform-agnostic type aliases
+pub use platform::{MemoryOptimizer, MemoryStatus, OptimizationResult};
+
 pub mod accel;
 pub mod tray;
 

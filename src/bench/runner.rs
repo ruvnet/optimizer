@@ -1,7 +1,7 @@
 //! Benchmark runner for performance testing
 
 use std::time::Instant;
-use crate::windows::memory::WindowsMemoryOptimizer;
+use crate::platform::MemoryOptimizer;
 
 pub struct BenchmarkRunner {
     iterations: usize,
@@ -27,7 +27,7 @@ impl BenchmarkRunner {
     pub fn run_memory_status_bench(&self) -> BenchmarkResult {
         // Warmup
         for _ in 0..self.warmup {
-            let _ = WindowsMemoryOptimizer::get_memory_status();
+            let _ = MemoryOptimizer::get_memory_status();
         }
         
         let mut times = Vec::with_capacity(self.iterations);
@@ -35,7 +35,7 @@ impl BenchmarkRunner {
         
         for _ in 0..self.iterations {
             let iter_start = Instant::now();
-            let _ = WindowsMemoryOptimizer::get_memory_status();
+            let _ = MemoryOptimizer::get_memory_status();
             times.push(iter_start.elapsed().as_micros() as u64);
         }
         

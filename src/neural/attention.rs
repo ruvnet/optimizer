@@ -3,7 +3,7 @@
 //! Uses multi-head attention to weight process importance.
 
 use crate::core::patterns::MemoryPattern;
-use crate::windows::memory::MemoryStatus;
+use crate::platform::MemoryStatus;
 
 /// Attention-based scorer for optimization decisions
 pub struct AttentionScorer {

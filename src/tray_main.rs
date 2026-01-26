@@ -2,10 +2,9 @@
 //!
 //! This is a separate binary for the system tray that hides the console window.
 
-#![windows_subsystem = "windows"]
+#![cfg_attr(target_os = "windows", windows_subsystem = "windows")]
 
 mod core;
-mod windows;
 mod neural;
 mod bench;
 mod monitor;
@@ -13,6 +12,15 @@ mod accel;
 mod tray;
 mod algorithms;
 mod dashboard;
+mod platform;
+mod security;
+
+// Platform-specific module declarations
+#[cfg(target_os = "windows")]
+mod windows;
+
+#[cfg(target_os = "macos")]
+mod macos;
 
 fn main() {
     // Immediately hide/detach from any console window
