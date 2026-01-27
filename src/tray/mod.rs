@@ -64,6 +64,7 @@ impl TrayApp {
         );
         let optimize_item = MenuItem::new("Optimize Now", true, None);
         let aggressive_item = MenuItem::new("Deep Clean", true, None);
+        let browser_item = MenuItem::new("Optimize Apps (Browsers/Electron)", true, None);
 
         // AI Mode submenu - use saved settings
         let ai_menu = Submenu::new("AI Mode", true);
@@ -108,6 +109,7 @@ impl TrayApp {
         menu.append(&auto_item)?;
         menu.append(&optimize_item)?;
         menu.append(&aggressive_item)?;
+        menu.append(&browser_item)?;
         menu.append(&PredefinedMenuItem::separator())?;
         menu.append(&ai_menu)?;
         menu.append(&settings_menu)?;
@@ -135,6 +137,7 @@ impl TrayApp {
         // Store menu item IDs
         let optimize_id = optimize_item.id().clone();
         let aggressive_id = aggressive_item.id().clone();
+        let browser_id = browser_item.id().clone();
         let cpu_id = cpu_item.id().clone();
         let quit_id = quit_item.id().clone();
         let auto_id = auto_item.id().clone();
@@ -254,6 +257,9 @@ impl TrayApp {
                 } else if event.id == aggressive_id {
                     let total_freed_clone = total_freed.clone();
                     run_optimization(true, total_freed_clone);
+                } else if event.id == browser_id {
+                    let total_freed_clone = total_freed.clone();
+                    run_browser_optimization(total_freed_clone);
                 } else if event.id == cpu_id {
                     show_cpu_info();
                 } else if event.id == github_id {
@@ -392,6 +398,108 @@ fn run_optimization(aggressive: bool, total_freed: Arc<AtomicU32>) {
                 show_message_box("RuVector Optimizer", &format!("Error: {}", e));
             }
         }
+    });
+}
+
+fn run_browser_optimization(total_freed: Arc<AtomicU32>) {
+    std::thread::spawn(move || {
+        use sysinfo::{System, ProcessRefreshKind};
+        use std::collections::HashMap;
+
+        // Browser/Electron app process patterns
+        const APP_PATTERNS: &[(&str, &[&str])] = &[
+            ("Brave", &["brave.exe", "brave"]),
+            ("Chrome", &["chrome.exe", "chrome"]),
+            ("Edge", &["msedge.exe", "msedge"]),
+            ("VSCode", &["code.exe", "code"]),
+            ("Discord", &["discord.exe", "discord"]),
+            ("Spotify", &["spotify.exe", "spotify"]),
+            ("WhatsApp", &["whatsapp.exe", "whatsapp"]),
+            ("Slack", &["slack.exe", "slack"]),
+            ("Teams", &["teams.exe", "ms-teams.exe", "teams"]),
+            ("Zoom", &["zoom.exe", "zoom", "zoomus", "cpthost.exe"]),
+            ("Obsidian", &["obsidian.exe", "obsidian"]),
+            ("Notion", &["notion.exe", "notion"]),
+            ("Figma", &["figma.exe", "figma"]),
+        ];
+
+        let mut system = System::new();
+        system.refresh_processes_specifics(ProcessRefreshKind::new().with_memory());
+
+        // Detect and categorize processes
+        let mut apps: HashMap<&str, Vec<(u32, f64)>> = HashMap::new();
+
+        for (pid, process) in system.processes() {
+            let name = process.name().to_lowercase();
+
+            for (app_name, patterns) in APP_PATTERNS {
+                if patterns.iter().any(|p| name.contains(p)) {
+                    let mem_mb = process.memory() as f64 / 1024.0 / 1024.0;
+                    apps.entry(*app_name).or_default().push((pid.as_u32(), mem_mb));
+                    break;
+                }
+            }
+        }
+
+        if apps.is_empty() {
+            show_message_box("RuVector - App Optimizer",
+                "No browsers or Electron apps detected.\n\n\
+                 Supported: Brave, Chrome, Edge, VSCode, Discord,\n\
+                 Spotify, WhatsApp, Slack, Teams, Zoom, Obsidian, Notion, Figma");
+            return;
+        }
+
+        // Optimize all detected apps
+        let mut total_processes = 0usize;
+        let mut total_trimmed = 0usize;
+        let mut freed_mb = 0.0f64;
+        let mut details = Vec::new();
+
+        for (app_name, processes) in &apps {
+            let mut app_freed = 0.0f64;
+            let mut app_trimmed = 0usize;
+
+            for (pid, _mem_mb) in processes {
+                match WindowsMemoryOptimizer::trim_process_working_set(*pid) {
+                    Ok(bytes_freed) => {
+                        if bytes_freed > 0 {
+                            app_freed += bytes_freed as f64 / 1024.0 / 1024.0;
+                            app_trimmed += 1;
+                        }
+                    }
+                    Err(e) => {
+                        tracing::debug!("Failed to trim {} process {}: {}", app_name, pid, e);
+                    }
+                }
+            }
+
+            total_processes += processes.len();
+            total_trimmed += app_trimmed;
+            freed_mb += app_freed;
+            details.push((app_name.to_string(), app_freed, app_trimmed, processes.len()));
+        }
+
+        // Update global counter
+        let current = total_freed.load(Ordering::SeqCst);
+        total_freed.store(current + freed_mb as u32, Ordering::SeqCst);
+
+        // Build detailed message
+        let mut msg = format!(
+            "App Optimization Complete!\n\n\
+             Freed: {:.1} MB\n\
+             Processes Optimized: {}/{}\n\n\
+             Details:\n",
+            freed_mb, total_trimmed, total_processes
+        );
+
+        for (name, freed, trimmed, count) in &details {
+            msg.push_str(&format!(
+                "  {} - {:.1} MB freed ({}/{} processes)\n",
+                name, freed, trimmed, count
+            ));
+        }
+
+        show_message_box("RuVector - App Optimizer", &msg);
     });
 }
 

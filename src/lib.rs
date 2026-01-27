@@ -41,6 +41,7 @@ pub use bench::{AdvancedBenchmarkRunner, BenchmarkSuite};
 pub use dashboard::{DashboardServer, DashboardData};
 pub mod accel;
 pub mod tray;
+pub mod browser;
 
 // AI Mode - optional GPU/VRAM management and AI workload optimization
 #[cfg(feature = "ai")]
