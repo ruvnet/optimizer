@@ -1,26 +1,31 @@
 # RuVector Memory Optimizer
 
-**Make your Windows PC faster by freeing up memory automatically.**
+**Make your computer faster by freeing up memory automatically.**
 
 Your computer slows down when too many programs use up RAM. RuVector MemOpt watches your memory and cleans it up automatically - like having a tiny helper that keeps your PC running smooth.
 
 [![Crates.io](https://img.shields.io/crates/v/ruvector-memopt.svg)](https://crates.io/crates/ruvector-memopt)
 [![Documentation](https://docs.rs/ruvector-memopt/badge.svg)](https://docs.rs/ruvector-memopt)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-[![Platform](https://img.shields.io/badge/platform-Windows%2010%2F11-0078D6.svg)](https://github.com/ruvnet/optimizer)
+[![Platform](https://img.shields.io/badge/platform-Windows%20|%20macOS-0078D6.svg)](https://github.com/ruvnet/optimizer)
 [![Rust](https://img.shields.io/badge/rust-1.75%2B-orange.svg)](https://www.rust-lang.org/)
 
-## What's New in v0.3.1
+## What's New in v0.4.0
 
-- **Settings Persistence** - All settings now saved to `%APPDATA%\RuVector\memopt.toml`
+- **macOS Support** - Full Apple Silicon (M1/M2/M3/M4) and Intel Mac support
+- **iOS-Style Notifications** - Toast notifications with sound on optimization complete
+- **Browser Optimization** - Analyze Chrome, Safari, Firefox, Arc, Brave, Edge memory usage
+- **Electron App Detection** - Track VS Code, Discord, Slack, Teams, Spotify memory
+- **Docker Monitoring** - Container resource usage tracking
+- **Memory Leak Detection** - Statistical analysis to find leaking processes
+- **Smart Suggestions** - AI-powered optimization recommendations
+
+### v0.3.x Features
+
+- **Settings Persistence** - All settings saved automatically
 - **Game Mode Detection** - Auto-detects 40+ games and skips optimization during gameplay
 - **Focus Mode Detection** - Detects video calls (Zoom, Teams, Discord) and optimizes aggressively
-- **Auto-Start on Login** - Installer adds tray to Windows startup
-
-### v0.3.0 Features
-
 - **AI Mode** - GPU/VRAM monitoring for AI workloads (Ollama, llama.cpp, PyTorch)
-- **System Tray Enhancements** - New settings menu, threshold controls, GitHub link
 - **Console-Free Tray** - Dedicated tray binary that runs without a console window
 
 ## What It Does
@@ -32,13 +37,15 @@ Your computer slows down when too many programs use up RAM. RuVector MemOpt watc
 
 ## Quick Start
 
-### Option 1: Installer (Recommended)
+### Windows
+
+#### Option 1: Installer (Recommended)
 1. Download `RuVectorMemOptSetup.exe` from [Releases](https://github.com/ruvnet/optimizer/releases)
 2. Run the installer
 3. Launch "RuVector MemOpt" from Start Menu
 4. Look for the green icon in your system tray (bottom-right)
 
-### Option 2: Portable (No Install)
+#### Option 2: Portable (No Install)
 1. Download `RuVectorMemOpt.exe` from [Releases](https://github.com/ruvnet/optimizer/releases)
 2. Open Command Prompt or PowerShell
 3. Navigate to where you downloaded it: `cd Downloads`
@@ -46,6 +53,27 @@ Your computer slows down when too many programs use up RAM. RuVector MemOpt watc
 5. Look for the green icon in your system tray
 
 **Tip:** Can't find the tray icon? Click the `^` arrow in the bottom-right to show hidden icons.
+
+### macOS
+
+1. Download `ruvector-memopt-macos` from [Releases](https://github.com/ruvnet/optimizer/releases)
+2. Open Terminal
+3. Make it executable: `chmod +x ruvector-memopt-macos`
+4. Run the menu bar app: `./ruvector-memopt-macos tray`
+5. Look for the memory icon in your menu bar (top-right)
+
+**For full optimization (requires sudo):**
+```bash
+sudo ./ruvector-memopt-macos tray
+```
+
+**Build from source (Apple Silicon or Intel):**
+```bash
+git clone https://github.com/ruvnet/optimizer
+cd optimizer
+cargo build --release --bin ruvector-memopt-macos
+./target/release/ruvector-memopt-macos tray
+```
 
 ### What You'll See
 
@@ -104,7 +132,7 @@ When your RAM fills up, Windows starts using your hard drive as backup memory (c
 
 ## Commands
 
-Open Command Prompt and run:
+### Windows (Command Prompt/PowerShell)
 
 ```bash
 # Basic Commands
@@ -126,6 +154,25 @@ ruvector-memopt clusters            # MinCut process clustering
 ruvector-memopt patterns --duration 30  # Spectral pattern analysis
 ruvector-memopt bench --advanced    # Run algorithm benchmarks
 ruvector-memopt dashboard-server    # Start JSON API dashboard
+```
+
+### macOS (Terminal)
+
+```bash
+# Basic Commands
+./ruvector-memopt-macos status      # Check your memory
+./ruvector-memopt-macos optimize    # Free memory now
+./ruvector-memopt-macos tray        # Start menu bar app
+
+# macOS-Specific Analysis
+./ruvector-memopt-macos browsers    # Browser memory usage (Chrome, Safari, Firefox, Arc)
+./ruvector-memopt-macos electron    # Electron app memory (VS Code, Discord, Slack)
+./ruvector-memopt-macos docker      # Docker container memory usage
+./ruvector-memopt-macos leaks       # Detect memory leaks
+./ruvector-memopt-macos suggest     # AI-powered optimization suggestions
+
+# Run with sudo for full optimization
+sudo ./ruvector-memopt-macos optimize
 ```
 
 ### Tray Icon Colors
@@ -201,10 +248,17 @@ When running LLMs, RuVector can optimize model layer placement:
 
 ## System Requirements
 
+### Windows
 - Windows 10 or 11
 - 4 GB RAM minimum
 - Works without admin (admin unlocks more features)
 - **For AI Mode**: NVIDIA GPU recommended (AMD/Intel supported with limited features)
+
+### macOS
+- macOS 12 (Monterey) or later
+- Apple Silicon (M1/M2/M3/M4) or Intel Mac
+- 4 GB RAM minimum
+- Works without sudo (sudo unlocks kernel-level optimization)
 
 ## For Developers
 
@@ -225,11 +279,12 @@ cargo build --release --features ai-full
 
 ### Binaries Produced
 
-| Binary | Description |
-|--------|-------------|
-| `ruvector-memopt.exe` | Main CLI with all commands |
-| `ruvector-memopt-tray.exe` | System tray app (no console window) |
-| `ruvector-memopt-service.exe` | Windows service for background optimization |
+| Binary | Platform | Description |
+|--------|----------|-------------|
+| `ruvector-memopt.exe` | Windows | Main CLI with all commands |
+| `ruvector-memopt-tray.exe` | Windows | System tray app (no console window) |
+| `ruvector-memopt-service.exe` | Windows | Windows service for background optimization |
+| `ruvector-memopt-macos` | macOS | Menu bar app with all commands |
 
 ### Install from Crates.io
 ```bash
@@ -288,7 +343,7 @@ A: Yes! Older PCs with less RAM benefit the most.
 
 ```
 ┌───────────────────────────────────────────────────────────────┐
-│                    RuVector MemOpt v0.3.0                      │
+│                    RuVector MemOpt v0.4.0                      │
 ├───────────────────────────────────────────────────────────────┤
 │  CLI Interface  │  System Tray  │  Dashboard  │  Win Service  │
 ├───────────────────────────────────────────────────────────────┤

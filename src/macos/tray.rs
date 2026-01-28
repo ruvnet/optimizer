@@ -620,7 +620,7 @@ fn open_github() {
     let _ = Command::new("open").arg(GITHUB_URL).spawn();
 }
 
-/// Show iOS-style toast notification (non-blocking, with sound)
+/// Show iOS-style toast notification (uses alert with auto-dismiss to bypass Focus mode)
 fn show_toast(title: &str, message: &str, freed_mb: f64) {
     let title = title.to_string();
     let message = message.to_string();
@@ -630,7 +630,7 @@ fn show_toast(title: &str, message: &str, freed_mb: f64) {
         let clean_title = title.replace("\"", "'").replace("\\", "");
         let clean_message = message.replace("\"", "'").replace("\\", "").replace("\n", " • ");
 
-        // Determine sound based on result
+        // Play sound based on result
         let sound = if freed_mb > 100.0 {
             "Glass"
         } else if freed_mb > 0.0 {
@@ -639,10 +639,16 @@ fn show_toast(title: &str, message: &str, freed_mb: f64) {
             "Blow"
         };
 
-        // Use osascript to show native macOS notification
+        // Play sound
+        let _ = Command::new("afplay")
+            .arg(format!("/System/Library/Sounds/{}.aiff", sound))
+            .spawn();
+
+        // Use display alert with giving up (auto-dismiss after 3 seconds)
+        // This bypasses Focus mode notification blocking
         let script = format!(
-            r#"display notification "{}" with title "{}" sound name "{}""#,
-            clean_message, clean_title, sound
+            r#"display alert "{}" message "{}" giving up after 3"#,
+            clean_title, clean_message
         );
 
         let _ = Command::new("osascript")
