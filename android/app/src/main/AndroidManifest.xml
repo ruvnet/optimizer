@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    RuVector Memory Optimizer - Android Manifest Template
+
+    This manifest template defines the required permissions and components
+    for integrating RuVector Memory Optimizer into an Android application.
+
+    IMPORTANT: This is read-only monitoring - Android does not allow
+    direct memory manipulation from userspace apps without root.
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.ruvector.memopt">
+
+    <!--
+        Required Permissions:
+        - PACKAGE_USAGE_STATS: For detailed process/app memory information
+        - POST_NOTIFICATIONS: For memory alerts (Android 13+)
+        - RECEIVE_BOOT_COMPLETED: For auto-start monitoring service
+        - FOREGROUND_SERVICE: For continuous background monitoring
+    -->
+    <uses-permission android:name="android.permission.PACKAGE_USAGE_STATS"
+        tools:ignore="ProtectedPermissions" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+
+    <!-- Optional: For more detailed process information (requires system signature) -->
+    <!-- <uses-permission android:name="android.permission.GET_TASKS" /> -->
+
+    <application
+        android:name=".RuVectorApplication"
+        android:allowBackup="true"
+        android:extractNativeLibs="true"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.RuVectorMemopt">
+
+        <!-- Main Activity -->
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:label="@string/app_name"
+            android:theme="@style/Theme.RuVectorMemopt">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <!-- Settings Activity for configuring monitoring -->
+        <activity
+            android:name=".SettingsActivity"
+            android:exported="false"
+            android:label="@string/settings_title"
+            android:parentActivityName=".MainActivity" />
+
+        <!-- Background Monitoring Service -->
+        <service
+            android:name=".MemoryMonitorService"
+            android:enabled="true"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="memory_monitoring" />
+        </service>
+
+        <!-- Boot Receiver for auto-start -->
+        <receiver
+            android:name=".BootReceiver"
+            android:enabled="true"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.QUICKBOOT_POWERON" />
+            </intent-filter>
+        </receiver>
+
+        <!-- Periodic Work for background monitoring via WorkManager -->
+        <provider
+            android:name="androidx.startup.InitializationProvider"
+            android:authorities="${applicationId}.androidx-startup"
+            android:exported="false"
+            tools:node="merge">
+            <meta-data
+                android:name="androidx.work.WorkManagerInitializer"
+                android:value="androidx.startup" />
+        </provider>
+
+        <!-- Quick Settings Tile (Android 7.0+) -->
+        <service
+            android:name=".MemoryTileService"
+            android:exported="true"
+            android:icon="@drawable/ic_memory"
+            android:label="@string/tile_label"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.service.quicksettings.TOGGLEABLE_TILE"
+                android:value="true" />
+        </service>
+
+        <!-- App metadata -->
+        <meta-data
+            android:name="com.ruvector.memopt.VERSION"
+            android:value="0.3.1" />
+        <meta-data
+            android:name="com.ruvector.memopt.NATIVE_LIB"
+            android:value="ruvector_memopt" />
+    </application>
+
+</manifest>
