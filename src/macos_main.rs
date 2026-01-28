@@ -18,8 +18,10 @@ mod platform;
 mod dashboard;
 mod monitor;
 mod security;
+mod apps;
 
 use macos::memory::MacMemoryOptimizer;
+use apps::{BrowserOptimizer, ElectronManager, DockerManager, LeakDetector, SmartSuggestions};
 use macos::safety::{SafetyConfig, SafetyGuard};
 use bench::advanced::AdvancedBenchmarkRunner;
 
@@ -75,6 +77,29 @@ enum Commands {
         #[arg(short, long, default_value = "5")]
         max: usize,
     },
+
+    /// Show browser memory usage (Chrome, Firefox, Safari, Edge, Arc, Brave)
+    Browsers,
+
+    /// Show Electron app memory usage (VS Code, Discord, Slack, etc.)
+    Electron,
+
+    /// Show Docker container resource usage
+    Docker,
+
+    /// Detect potential memory leaks
+    Leaks {
+        /// Number of samples to take
+        #[arg(short, long, default_value = "10")]
+        samples: usize,
+
+        /// Interval between samples in seconds
+        #[arg(short, long, default_value = "5")]
+        interval: u64,
+    },
+
+    /// Show smart optimization suggestions
+    Suggest,
 }
 
 #[tokio::main]
@@ -287,6 +312,58 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 println!();
             }
         }
+
+        Commands::Browsers => {
+            println!("Analyzing browser memory usage...\n");
+            let mut optimizer = BrowserOptimizer::new();
+            optimizer.refresh();
+            optimizer.print_summary();
+        }
+
+        Commands::Electron => {
+            println!("Analyzing Electron app memory usage...\n");
+            let mut manager = ElectronManager::new();
+            manager.refresh();
+            manager.print_summary();
+        }
+
+        Commands::Docker => {
+            let mut manager = DockerManager::new();
+            if !manager.is_available() {
+                println!("Docker is not available or not running.");
+                return Ok(());
+            }
+            manager.refresh();
+            manager.print_summary();
+        }
+
+        Commands::Leaks { samples, interval } => {
+            println!("Monitoring for memory leaks...");
+            println!("Taking {} samples at {} second intervals\n", samples, interval);
+
+            let mut detector = LeakDetector::new();
+            detector.set_sample_interval(interval);
+
+            for i in 0..samples {
+                detector.sample();
+                print!("\rSampling... {}/{}", i + 1, samples);
+                std::io::Write::flush(&mut std::io::stdout()).ok();
+
+                if i < samples - 1 {
+                    std::thread::sleep(std::time::Duration::from_secs(interval));
+                }
+            }
+            println!();
+
+            detector.print_summary();
+        }
+
+        Commands::Suggest => {
+            println!("Generating smart optimization suggestions...\n");
+            let mut engine = SmartSuggestions::new();
+            engine.refresh();
+            engine.print_summary();
+        }
     }
 
     Ok(())
@@ -298,4 +375,13 @@ fn truncate(s: &str, max: usize) -> String {
     } else {
         format!("{}...", &s[..max - 3])
     }
+}
+
+// Stub main for non-macOS platforms
+#[cfg(not(target_os = "macos"))]
+fn main() {
+    eprintln!("This binary is macOS-only.");
+    eprintln!("On Windows, please use the main ruvector-memopt binary:");
+    eprintln!("  cargo run --release --bin ruvector-memopt");
+    std::process::exit(1);
 }

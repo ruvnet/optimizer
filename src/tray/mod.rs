@@ -403,7 +403,7 @@ fn run_optimization(aggressive: bool, total_freed: Arc<AtomicU32>) {
 
 fn run_browser_optimization(total_freed: Arc<AtomicU32>) {
     std::thread::spawn(move || {
-        use sysinfo::{System, ProcessRefreshKind};
+        use sysinfo::System;
         use std::collections::HashMap;
 
         // Browser/Electron app process patterns
@@ -424,13 +424,13 @@ fn run_browser_optimization(total_freed: Arc<AtomicU32>) {
         ];
 
         let mut system = System::new();
-        system.refresh_processes_specifics(ProcessRefreshKind::new().with_memory());
+        system.refresh_processes(sysinfo::ProcessesToUpdate::All, true);
 
         // Detect and categorize processes
         let mut apps: HashMap<&str, Vec<(u32, f64)>> = HashMap::new();
 
         for (pid, process) in system.processes() {
-            let name = process.name().to_lowercase();
+            let name = process.name().to_string_lossy().to_lowercase();
 
             for (app_name, patterns) in APP_PATTERNS {
                 if patterns.iter().any(|p| name.contains(p)) {
@@ -649,7 +649,7 @@ impl Default for TrayApp {
 
 /// Check if a game is currently running (Game Mode)
 fn is_game_running() -> bool {
-    use sysinfo::{System, ProcessRefreshKind};
+    use sysinfo::System;
 
     // Known game process names (lowercase for comparison)
     const GAME_PROCESSES: &[&str] = &[
@@ -683,10 +683,10 @@ fn is_game_running() -> bool {
     ];
 
     let mut system = System::new();
-    system.refresh_processes_specifics(ProcessRefreshKind::new());
+    system.refresh_processes(sysinfo::ProcessesToUpdate::All, true);
 
     for (_pid, process) in system.processes() {
-        let name = process.name().to_lowercase();
+        let name = process.name().to_string_lossy().to_lowercase();
         for game in GAME_PROCESSES {
             if name.contains(game) {
                 tracing::debug!("Game detected: {}", name);
@@ -700,7 +700,7 @@ fn is_game_running() -> bool {
 
 /// Check if a video call application is active (Focus Mode)
 fn is_video_call_active() -> bool {
-    use sysinfo::{System, ProcessRefreshKind};
+    use sysinfo::System;
 
     // Video call applications
     const VIDEO_CALL_PROCESSES: &[&str] = &[
@@ -718,10 +718,10 @@ fn is_video_call_active() -> bool {
     ];
 
     let mut system = System::new();
-    system.refresh_processes_specifics(ProcessRefreshKind::new());
+    system.refresh_processes(sysinfo::ProcessesToUpdate::All, true);
 
     for (_pid, process) in system.processes() {
-        let name = process.name().to_lowercase();
+        let name = process.name().to_string_lossy().to_lowercase();
         for app in VIDEO_CALL_PROCESSES {
             if name.contains(app) {
                 tracing::debug!("Video call app detected: {}", name);

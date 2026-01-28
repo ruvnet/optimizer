@@ -11,6 +11,7 @@
 use sysinfo::{System, ProcessRefreshKind};
 use tracing::{info, warn};
 use std::collections::HashMap;
+use std::ffi::OsString;
 
 /// Chromium process types
 #[derive(Debug, Clone, PartialEq)]
@@ -76,14 +77,12 @@ impl BrowserOptimizer {
 
     /// Detect all browser and Electron app processes
     pub fn detect_browsers(&mut self) -> HashMap<String, Vec<BrowserProcess>> {
-        self.system.refresh_processes_specifics(
-            ProcessRefreshKind::new().with_memory().with_cpu(),
-        );
+        self.system.refresh_processes(sysinfo::ProcessesToUpdate::All, true);
 
         let mut apps: HashMap<String, Vec<BrowserProcess>> = HashMap::new();
 
         for (pid, process) in self.system.processes() {
-            let name = process.name().to_lowercase();
+            let name = process.name().to_string_lossy().to_lowercase();
 
             // Detect app type
             let app_name = if BRAVE_PROCESSES.iter().any(|&b| name.contains(b)) {
@@ -136,8 +135,11 @@ impl BrowserOptimizer {
     }
 
     /// Classify Chromium process type from command line
-    fn classify_process(cmd: &[String]) -> ChromiumProcessType {
-        let cmd_str = cmd.join(" ").to_lowercase();
+    fn classify_process(cmd: &[OsString]) -> ChromiumProcessType {
+        let cmd_str: String = cmd.iter()
+            .map(|s| s.to_string_lossy().to_lowercase())
+            .collect::<Vec<_>>()
+            .join(" ");
 
         if cmd_str.contains("--type=gpu") {
             ChromiumProcessType::Gpu
@@ -155,7 +157,7 @@ impl BrowserOptimizer {
     }
 
     /// Extract tab/page title if available
-    fn extract_title(_cmd: &[String]) -> Option<String> {
+    fn extract_title(_cmd: &[OsString]) -> Option<String> {
         // Chromium doesn't expose tab titles in cmd, but we can try
         None
     }

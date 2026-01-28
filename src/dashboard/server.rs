@@ -95,7 +95,7 @@ impl DashboardServer {
                         .filter_map(|&pid| {
                             system.process(sysinfo::Pid::from_u32(pid)).map(|p| ProcessInfo {
                                 pid,
-                                name: p.name().to_string(),
+                                name: p.name().to_string_lossy().to_string(),
                                 memory_mb: p.memory() as f64 / (1024.0 * 1024.0),
                                 pagerank_score: pagerank.get_score(pid),
                                 trim_priority: 0.5,

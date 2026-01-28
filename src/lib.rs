@@ -46,6 +46,9 @@ pub mod browser;
 #[cfg(target_os = "macos")]
 pub mod macos;
 
+// Application-specific optimization (cross-platform)
+pub mod apps;
+
 // Re-exports - Core
 pub use core::config::OptimizerConfig;
 #[cfg(target_os = "windows")]
@@ -68,6 +71,12 @@ pub use security::privileges::PrivilegeManager;
 
 #[cfg(target_os = "macos")]
 pub use macos::safety::{SafetyConfig, SafetyGuard};
+
+// App-specific optimization re-exports
+pub use apps::{
+    BrowserOptimizer, ElectronManager, DockerManager, LeakDetector, SmartSuggestions,
+    AppCategory, AppInfo, OptimizationAction, OptimizationResult,
+};
 
 // AI Mode - optional GPU/VRAM management and AI workload optimization
 #[cfg(feature = "ai")]

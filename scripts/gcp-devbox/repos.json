@@ -1,0 +1,109 @@
+{
+  "repos": {
+    "claude-flow": {
+      "url": "https://github.com/ruvnet/claude-flow",
+      "description": "Multi-agent orchestration with Claude",
+      "machine_type": "e2-standard-4",
+      "disk_size": "50",
+      "gpu": null,
+      "post_clone": [
+        "npm install",
+        "npx @claude-flow/cli@latest init --force"
+      ]
+    },
+    "agentic-flow": {
+      "url": "https://github.com/ruvnet/agentic-flow",
+      "description": "Agentic workflow framework",
+      "machine_type": "e2-standard-4",
+      "disk_size": "50",
+      "gpu": null,
+      "post_clone": [
+        "npm install"
+      ]
+    },
+    "ruvector-memopt": {
+      "url": "https://github.com/ruvnet/ruvector-memopt",
+      "description": "Memory optimization tools",
+      "machine_type": "e2-standard-2",
+      "disk_size": "30",
+      "gpu": null,
+      "post_clone": []
+    },
+    "agentdb": {
+      "url": "https://github.com/ruvnet/agentdb",
+      "description": "Vector database for agents",
+      "machine_type": "e2-standard-4",
+      "disk_size": "50",
+      "gpu": null,
+      "post_clone": [
+        "npm install"
+      ]
+    },
+    "bot-generator": {
+      "url": "https://github.com/ruvnet/bot-generator",
+      "description": "Bot generation framework",
+      "machine_type": "e2-standard-4",
+      "disk_size": "50",
+      "gpu": null,
+      "post_clone": [
+        "npm install"
+      ]
+    },
+    "federated-mcp": {
+      "url": "https://github.com/ruvnet/federated-mcp",
+      "description": "Federated MCP servers",
+      "machine_type": "e2-standard-4",
+      "disk_size": "50",
+      "gpu": null,
+      "post_clone": [
+        "npm install"
+      ]
+    },
+    "ml-workspace": {
+      "url": "https://github.com/ruvnet/ml-workspace",
+      "description": "ML development environment",
+      "machine_type": "n1-standard-8",
+      "disk_size": "100",
+      "gpu": "nvidia-tesla-t4",
+      "post_clone": [
+        "pip install -r requirements.txt"
+      ]
+    },
+    "custom": {
+      "url": "",
+      "description": "Custom repository URL",
+      "machine_type": "e2-standard-4",
+      "disk_size": "50",
+      "gpu": null,
+      "post_clone": []
+    }
+  },
+  "defaults": {
+    "project_prefix": "devbox",
+    "region": "us-central1",
+    "zone": "us-central1-a",
+    "image_family": "ubuntu-2404-lts-amd64",
+    "image_project": "ubuntu-os-cloud",
+    "tailscale_authkey_env": "TAILSCALE_AUTHKEY",
+    "service_account": null
+  },
+  "base_packages": [
+    "git",
+    "curl",
+    "wget",
+    "build-essential",
+    "python3-pip",
+    "python3-venv",
+    "jq",
+    "unzip",
+    "htop",
+    "tmux"
+  ],
+  "dev_tools": {
+    "node": "20",
+    "python": "3.11",
+    "rust": true,
+    "go": true,
+    "docker": true
+  }
+}
