@@ -451,14 +451,29 @@ fn run_optimization(aggressive: bool, total_freed: Arc<AtomicU32>) {
                 let current = total_freed.load(Ordering::SeqCst);
                 total_freed.store(current + result.freed_mb as u32, Ordering::SeqCst);
 
-                let msg = format!(
-                    "Optimization Complete!\n\nMethod: {:?}\nFreed: {:.1} MB\nProcesses: {}\nTime: {} ms",
-                    result.method, result.freed_mb, result.processes_affected, result.duration_ms
-                );
-                show_notification("RuVector Optimizer", &msg);
+                // iOS-style toast notification
+                let title = if result.freed_mb > 100.0 {
+                    "✅ Memory Optimized!"
+                } else if result.freed_mb > 0.0 {
+                    "💾 Optimization Complete"
+                } else {
+                    "ℹ️ Memory Already Optimal"
+                };
+
+                let msg = if result.freed_mb > 0.0 {
+                    format!("Freed {:.0} MB • {} processes • {}ms",
+                        result.freed_mb, result.processes_affected, result.duration_ms)
+                } else {
+                    "No memory to reclaim right now".to_string()
+                };
+
+                show_toast(title, &msg, result.freed_mb);
+                tracing::info!("Optimized: method={:?}, affected {} processes, freed {:.1} MB in {}ms",
+                    result.method, result.processes_affected, result.freed_mb, result.duration_ms);
             }
             Err(e) => {
-                show_notification("RuVector Optimizer", &format!("Error: {}", e));
+                show_toast("❌ Optimization Failed", &e.to_string(), 0.0);
+                tracing::error!("Optimization error: {}", e);
             }
         }
     });
@@ -502,10 +517,7 @@ fn run_app_optimization(total_freed: Arc<AtomicU32>) {
         }
 
         if apps_found.is_empty() {
-            show_notification(
-                "RuVector - App Optimizer",
-                "No browsers or Electron apps detected.",
-            );
+            show_toast("ℹ️ No Apps Found", "No browsers or Electron apps running", 0.0);
             return;
         }
 
@@ -526,23 +538,42 @@ fn run_app_optimization(total_freed: Arc<AtomicU32>) {
             entry.1 += mem;
         }
 
-        for (app, (count, mem)) in by_app {
+        for (app, (count, mem)) in &by_app {
             msg.push_str(&format!("  {} - {:.0} MB ({} proc)\n", app, mem, count));
         }
 
         msg.push_str("\nTip: Use 'Deep Clean' to run purge command.");
 
-        // Attempt optimization via purge
+        // Show iOS-style summary notification
+        let app_count = by_app.len();
+        let summary = format!("Found {} apps using {:.0} MB", app_count, total_mem);
+
+        // Attempt optimization via purge if we have sudo
         let optimizer = MacMemoryOptimizer::new();
-        if optimizer.has_sudo_privileges() {
+        let freed = if optimizer.has_sudo_privileges() {
             if let Ok(result) = optimizer.optimize(true) {
                 let current = total_freed.load(Ordering::SeqCst);
                 total_freed.store(current + result.freed_mb as u32, Ordering::SeqCst);
-                msg.push_str(&format!("\n\nFreed: {:.0} MB", result.freed_mb));
+                result.freed_mb
+            } else {
+                0.0
             }
-        }
+        } else {
+            0.0
+        };
 
-        show_notification("RuVector - App Optimizer", &msg);
+        let title = if freed > 0.0 {
+            format!("✅ Apps Analyzed • Freed {:.0} MB", freed)
+        } else {
+            "💻 Apps Analyzed".to_string()
+        };
+
+        show_toast(&title, &summary, freed);
+
+        // Log details
+        tracing::info!("App optimization: found {} apps, {:.0} MB total, freed {:.1} MB",
+            app_count, total_mem, freed);
+        println!("{}", msg);
     });
 }
 
@@ -556,26 +587,26 @@ fn show_system_info() {
         "Intel x86_64"
     };
 
-    let msg = format!(
-        "RuVector Memory Optimizer v{}\n\n\
-        Architecture: {}\n\
-        CPU: {}\n\
-        Cores: {}\n\n\
-        Sudo Access: {}\n\n\
-        SIMD: {}\n\
-        NEON: {}\n\n\
-        GitHub: {}",
-        VERSION,
-        arch,
-        caps.model,
-        caps.core_count,
-        if optimizer.has_sudo_privileges() { "Yes" } else { "No" },
-        if caps.has_avx2 { "AVX2" } else { "Basic" },
-        if cfg!(target_arch = "aarch64") { "Yes" } else { "N/A" },
-        GITHUB_URL
-    );
+    let sudo_status = if optimizer.has_sudo_privileges() { "✓" } else { "✗" };
 
-    show_notification("System Information", &msg);
+    // Show brief notification
+    let brief = format!("{} • {} cores • Sudo: {}",
+        arch, caps.core_count, sudo_status);
+    show_toast("💻 System Info", &brief, 0.0);
+
+    // Print full details to console
+    println!("\n╭─────────────────────────────────────╮");
+    println!("│  RuVector Memory Optimizer v{}   │", VERSION);
+    println!("├─────────────────────────────────────┤");
+    println!("│  Architecture: {:18} │", arch);
+    println!("│  CPU: {:27} │", &caps.model[..caps.model.len().min(27)]);
+    println!("│  Cores: {:25} │", caps.core_count);
+    println!("│  Sudo Access: {:19} │", if optimizer.has_sudo_privileges() { "Yes" } else { "No" });
+    println!("│  SIMD: {:26} │", if caps.has_avx2 { "AVX2" } else { "Basic" });
+    println!("│  NEON: {:26} │", if cfg!(target_arch = "aarch64") { "Yes" } else { "N/A" });
+    println!("├─────────────────────────────────────┤");
+    println!("│  GitHub: github.com/ruvnet/optimizer│");
+    println!("╰─────────────────────────────────────╯\n");
 }
 
 fn open_activity_monitor() {
@@ -589,21 +620,44 @@ fn open_github() {
     let _ = Command::new("open").arg(GITHUB_URL).spawn();
 }
 
+/// Show iOS-style toast notification (non-blocking, with sound)
+fn show_toast(title: &str, message: &str, freed_mb: f64) {
+    let title = title.to_string();
+    let message = message.to_string();
+
+    std::thread::spawn(move || {
+        // Clean message for AppleScript
+        let clean_title = title.replace("\"", "'").replace("\\", "");
+        let clean_message = message.replace("\"", "'").replace("\\", "").replace("\n", " • ");
+
+        // Determine sound based on result
+        let sound = if freed_mb > 100.0 {
+            "Glass"
+        } else if freed_mb > 0.0 {
+            "Pop"
+        } else {
+            "Blow"
+        };
+
+        // Use osascript to show native macOS notification
+        let script = format!(
+            r#"display notification "{}" with title "{}" sound name "{}""#,
+            clean_message, clean_title, sound
+        );
+
+        let _ = Command::new("osascript")
+            .arg("-e")
+            .arg(&script)
+            .spawn();
+
+        // Also print to console for debugging
+        println!("\n{}\n{}\n", title, message);
+    });
+}
+
+/// Show notification for informational messages
 fn show_notification(title: &str, message: &str) {
-    // Use osascript to show a notification
-    let script = format!(
-        r#"display notification "{}" with title "{}""#,
-        message.replace('"', r#"\""#).replace('\n', r#"\n"#),
-        title
-    );
-
-    let _ = Command::new("osascript")
-        .arg("-e")
-        .arg(&script)
-        .spawn();
-
-    // Also print to console for debugging
-    println!("\n{}\n{}\n", title, message);
+    show_toast(title, message, 0.0);
 }
 
 /// Create icon with usage percentage color coding

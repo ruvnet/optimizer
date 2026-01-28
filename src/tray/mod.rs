@@ -388,14 +388,28 @@ fn run_optimization(aggressive: bool, total_freed: Arc<AtomicU32>) {
                 let current = total_freed.load(Ordering::SeqCst);
                 total_freed.store(current + result.freed_mb as u32, Ordering::SeqCst);
 
-                let msg = format!(
-                    "Optimization Complete!\n\nFreed: {:.1} MB\nProcesses: {}\nTime: {} ms",
-                    result.freed_mb, result.processes_trimmed, result.duration_ms
-                );
-                show_message_box("RuVector Optimizer", &msg);
+                // iOS-style toast notification
+                let title = if result.freed_mb > 100.0 {
+                    "Memory Optimized!"
+                } else if result.freed_mb > 0.0 {
+                    "Optimization Complete"
+                } else {
+                    "Memory Already Optimal"
+                };
+
+                let msg = if result.freed_mb > 0.0 {
+                    format!("Freed {:.0} MB from {} processes", result.freed_mb, result.processes_trimmed)
+                } else {
+                    "No memory to reclaim right now".to_string()
+                };
+
+                show_notification(title, &msg, Some(result.freed_mb));
+                tracing::info!("Optimized: affected {} processes, freed {:.1} MB in {}ms",
+                    result.processes_trimmed, result.freed_mb, result.duration_ms);
             }
             Err(e) => {
-                show_message_box("RuVector Optimizer", &format!("Error: {}", e));
+                show_notification("Optimization Failed", &format!("{}", e), None);
+                tracing::error!("Optimization error: {}", e);
             }
         }
     });
@@ -442,10 +456,8 @@ fn run_browser_optimization(total_freed: Arc<AtomicU32>) {
         }
 
         if apps.is_empty() {
-            show_message_box("RuVector - App Optimizer",
-                "No browsers or Electron apps detected.\n\n\
-                 Supported: Brave, Chrome, Edge, VSCode, Discord,\n\
-                 Spotify, WhatsApp, Slack, Teams, Zoom, Obsidian, Notion, Figma");
+            show_notification("No Apps Found",
+                "No browsers or Electron apps running", None);
             return;
         }
 
@@ -483,23 +495,32 @@ fn run_browser_optimization(total_freed: Arc<AtomicU32>) {
         let current = total_freed.load(Ordering::SeqCst);
         total_freed.store(current + freed_mb as u32, Ordering::SeqCst);
 
-        // Build detailed message
-        let mut msg = format!(
-            "App Optimization Complete!\n\n\
-             Freed: {:.1} MB\n\
-             Processes Optimized: {}/{}\n\n\
-             Details:\n",
-            freed_mb, total_trimmed, total_processes
-        );
+        // iOS-style toast notification
+        let title = if freed_mb > 100.0 {
+            "Apps Optimized!"
+        } else if freed_mb > 0.0 {
+            "App Memory Freed"
+        } else {
+            "Apps Already Optimal"
+        };
 
+        // Build concise message for toast
+        let app_count = details.len();
+        let msg = if freed_mb > 0.0 {
+            format!("Freed {:.0} MB from {} apps ({} processes)",
+                freed_mb, app_count, total_trimmed)
+        } else {
+            format!("{} apps already optimized", app_count)
+        };
+
+        show_notification(title, &msg, Some(freed_mb));
+
+        // Log details
+        tracing::info!("App optimization: freed {:.1} MB from {}/{} processes",
+            freed_mb, total_trimmed, total_processes);
         for (name, freed, trimmed, count) in &details {
-            msg.push_str(&format!(
-                "  {} - {:.1} MB freed ({}/{} processes)\n",
-                name, freed, trimmed, count
-            ));
+            tracing::debug!("  {} - {:.1} MB freed ({}/{} processes)", name, freed, trimmed, count);
         }
-
-        show_message_box("RuVector - App Optimizer", &msg);
     });
 }
 
@@ -537,7 +558,105 @@ fn open_github() {
     }
 }
 
+/// Show iOS-style toast notification (non-blocking)
+fn show_notification(title: &str, message: &str, freed_mb: Option<f64>) {
+    let title = title.to_string();
+    let message = message.to_string();
+
+    std::thread::spawn(move || {
+        #[cfg(windows)]
+        show_windows_toast(&title, &message, freed_mb);
+
+        #[cfg(target_os = "macos")]
+        show_macos_notification(&title, &message, freed_mb);
+    });
+}
+
+/// Windows toast notification using PowerShell
+#[cfg(windows)]
+fn show_windows_toast(title: &str, message: &str, freed_mb: Option<f64>) {
+    use std::os::windows::process::CommandExt;
+
+    // Create a simple toast notification using PowerShell
+    // This shows an iOS-style banner notification
+    let escaped_title = title.replace("'", "''");
+    let escaped_message = message.replace("'", "''").replace("\n", " ");
+
+    // Build the notification with optional icon based on freed amount
+    let icon = if let Some(freed) = freed_mb {
+        if freed > 100.0 { "✅" }
+        else if freed > 0.0 { "💾" }
+        else { "ℹ️" }
+    } else {
+        "💻"
+    };
+
+    // Use BurntToast if available, fallback to balloon tip
+    let ps_script = format!(
+        r#"
+        try {{
+            Import-Module BurntToast -ErrorAction Stop
+            New-BurntToastNotification -Text '{} {}', '{}' -AppLogo 'C:\Windows\System32\mspaint.exe'
+        }} catch {{
+            Add-Type -AssemblyName System.Windows.Forms
+            $notify = New-Object System.Windows.Forms.NotifyIcon
+            $notify.Icon = [System.Drawing.SystemIcons]::Information
+            $notify.BalloonTipTitle = '{} {}'
+            $notify.BalloonTipText = '{}'
+            $notify.Visible = $true
+            $notify.ShowBalloonTip(3000)
+            Start-Sleep -Milliseconds 3500
+            $notify.Dispose()
+        }}
+        "#,
+        icon, escaped_title, escaped_message,
+        icon, escaped_title, escaped_message
+    );
+
+    const CREATE_NO_WINDOW: u32 = 0x08000000;
+
+    let _ = std::process::Command::new("powershell")
+        .args(["-WindowStyle", "Hidden", "-Command", &ps_script])
+        .creation_flags(CREATE_NO_WINDOW)
+        .spawn();
+}
+
+/// macOS notification using osascript (native Notification Center)
+#[cfg(target_os = "macos")]
+fn show_macos_notification(title: &str, message: &str, freed_mb: Option<f64>) {
+    // Build a clean, iOS-style notification message
+    let icon = if let Some(freed) = freed_mb {
+        if freed > 100.0 { "✅ " }
+        else if freed > 0.0 { "💾 " }
+        else { "ℹ️ " }
+    } else {
+        ""
+    };
+
+    // Clean message for AppleScript (escape quotes)
+    let clean_message = message
+        .replace("\\", "\\\\")
+        .replace("\"", "\\\"")
+        .replace("\n", " • ");
+
+    let clean_title = format!("{}{}", icon, title);
+
+    // Use osascript to show native macOS notification
+    let script = format!(
+        r#"display notification "{}" with title "{}" sound name "Glass""#,
+        clean_message, clean_title
+    );
+
+    let _ = std::process::Command::new("osascript")
+        .args(["-e", &script])
+        .spawn();
+}
+
+/// Legacy message box (blocking dialog) - used for detailed info
 fn show_message_box(title: &str, message: &str) {
+    // Log to console as well
+    println!("\n{}\n{}\n", title, message);
+
     #[cfg(windows)]
     {
         use std::ffi::OsStr;
@@ -560,6 +679,26 @@ fn show_message_box(title: &str, message: &str) {
                 windows::Win32::UI::WindowsAndMessaging::MB_ICONINFORMATION,
             );
         }
+    }
+
+    #[cfg(target_os = "macos")]
+    {
+        // On macOS, show as a dialog using osascript
+        let clean_message = message
+            .replace("\\", "\\\\")
+            .replace("\"", "\\\"");
+        let clean_title = title
+            .replace("\\", "\\\\")
+            .replace("\"", "\\\"");
+
+        let script = format!(
+            r#"display dialog "{}" with title "{}" buttons {{"OK"}} default button "OK""#,
+            clean_message, clean_title
+        );
+
+        let _ = std::process::Command::new("osascript")
+            .args(["-e", &script])
+            .spawn();
     }
 }
 
