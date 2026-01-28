@@ -1,19 +1,30 @@
 //! RuVector Memory Optimizer - System Tray Application
 //!
 //! This is a separate binary for the system tray that hides the console window.
+//! Windows-only binary.
 
-#![windows_subsystem = "windows"]
+#![cfg_attr(windows, windows_subsystem = "windows")]
 
+#[cfg(windows)]
 mod core;
+#[cfg(windows)]
 mod windows;
+#[cfg(windows)]
 mod neural;
+#[cfg(windows)]
 mod bench;
+#[cfg(windows)]
 mod monitor;
+#[cfg(windows)]
 mod accel;
+#[cfg(windows)]
 mod tray;
+#[cfg(windows)]
 mod algorithms;
+#[cfg(windows)]
 mod dashboard;
 
+#[cfg(windows)]
 fn main() {
     // Immediately hide/detach from any console window
     #[cfg(windows)]
@@ -45,4 +56,10 @@ fn main() {
         let error_path = std::env::temp_dir().join("ruvector-memopt-error.txt");
         let _ = std::fs::write(&error_path, format!("Tray error: {}", e));
     }
+}
+
+#[cfg(not(windows))]
+fn main() {
+    eprintln!("Windows tray application only runs on Windows");
+    eprintln!("On macOS, use: ruvector-memopt tray");
 }

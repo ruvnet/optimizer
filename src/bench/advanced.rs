@@ -3,7 +3,7 @@
 //! Measures performance of MinCut, PageRank, Count-Min Sketch, and Spectral Analysis
 
 use std::time::Instant;
-use sysinfo::System;
+use sysinfo::{System, ProcessesToUpdate};
 
 use crate::algorithms::{
     mincut::MinCutClusterer,
@@ -96,7 +96,7 @@ impl AdvancedBenchmarkRunner {
         println!("\n📊 MinCut Process Clustering");
 
         let mut system = System::new_all();
-        system.refresh_processes();
+        system.refresh_processes(ProcessesToUpdate::All, true);
 
         // Warmup
         for _ in 0..self.warmup {
@@ -126,7 +126,7 @@ impl AdvancedBenchmarkRunner {
         println!("📊 PageRank Process Priority");
 
         let mut system = System::new_all();
-        system.refresh_processes();
+        system.refresh_processes(ProcessesToUpdate::All, true);
 
         // Warmup
         for _ in 0..self.warmup {

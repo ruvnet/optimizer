@@ -1,17 +1,17 @@
 [package]
 name = "ruvector-memopt"
-version = "0.3.1"
+version = "0.4.0"
 edition = "2021"
 rust-version = "1.75"
 authors = ["ruv <ruvnet@users.noreply.github.com>"]
-description = "Intelligent Windows memory optimizer with neural learning capabilities for smart optimization decisions"
+description = "Intelligent cross-platform memory optimizer with neural learning capabilities for smart optimization decisions"
 license = "MIT"
 repository = "https://github.com/ruvnet/optimizer"
 homepage = "https://github.com/ruvnet/optimizer"
 documentation = "https://docs.rs/ruvector-memopt"
 readme = "README.md"
-keywords = ["memory", "optimizer", "windows", "neural", "performance"]
-categories = ["memory-management", "os::windows-apis", "command-line-utilities"]
+keywords = ["memory", "optimizer", "macos", "windows", "neural", "performance"]
+categories = ["memory-management", "command-line-utilities"]
 exclude = [
     "dist/*",
     "installer/*",
@@ -25,13 +25,56 @@ exclude = [
 default = []
 # AI Mode - GPU/VRAM monitoring, Ollama integration, resource bridging
 ai = ["reqwest", "dep:nvml-wrapper"]
-# NVML support for NVIDIA GPU monitoring
+# NVML support for NVIDIA GPU monitoring (Windows/Linux only)
 nvml = ["dep:nvml-wrapper"]
 # Full AI features including all integrations
 ai-full = ["ai", "nvml"]
+# macOS Metal GPU monitoring (future)
+metal = []
 
 [dependencies]
 num_cpus = "1.16"
+
+# HTTP client for AI runtime APIs (optional)
+reqwest = { version = "0.11", features = ["json"], optional = true }
+
+# NVIDIA Management Library (optional, Windows/Linux)
+nvml-wrapper = { version = "0.9", optional = true }
+
+# Async runtime
+tokio = { version = "1.36", features = ["full"] }
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+toml = "0.8"
+
+# System tray (cross-platform)
+tray-icon = "0.14"
+winit = { version = "0.30", features = ["rwh_06"] }
+
+# Logging
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# CLI
+clap = { version = "4.5", features = ["derive"] }
+
+# Metrics & time (cross-platform)
+sysinfo = "0.33"
+chrono = "0.4"
+
+# Neural/ML utilities
+ndarray = "0.15"
+rand = "0.8"
+
+# Cross-platform libc
+libc = "0.2"
+
+# ============================================================================
+# Windows-specific dependencies
+# ============================================================================
+[target.'cfg(windows)'.dependencies]
 # Windows APIs
 windows = { version = "0.58", features = [
     "Win32_Foundation",
@@ -47,62 +90,48 @@ windows = { version = "0.58", features = [
     "Win32_Graphics_Dxgi",
 ]}
 
-# HTTP client for AI runtime APIs (optional)
-reqwest = { version = "0.11", features = ["json"], optional = true }
-
-# NVIDIA Management Library (optional)
-nvml-wrapper = { version = "0.9", optional = true }
-
-# WASM runtime for RuVector
-wasmer = "4.3"
-wasmer-compiler-singlepass = "4.3"
-
-# Async runtime
-tokio = { version = "1.36", features = ["full"] }
-
-# Serialization
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
-toml = "0.8"
-
-# System tray
-tray-icon = "0.14"
-winit = { version = "0.30", features = ["rwh_06"] }
-
-# Windows service
-windows-service = "0.7"
-
-# Logging
-tracing = "0.1"
-tracing-subscriber = { version = "0.3", features = ["env-filter"] }
-
-# CLI
-clap = { version = "4.5", features = ["derive"] }
-
-# Metrics & time
-sysinfo = "0.30"
-chrono = "0.4"
-
-# Neural/ML utilities
-ndarray = "0.15"
-rand = "0.8"
-
-# IPC for service communication
-interprocess = "2.0"
-
-[target.'cfg(windows)'.dependencies]
 winapi = { version = "0.3", features = [
     "memoryapi", "psapi", "processthreadsapi",
     "sysinfoapi", "winbase", "winnt", "errhandlingapi"
 ]}
 
-[build-dependencies]
+# Windows service
+windows-service = "0.7"
+
+# IPC for service communication
+interprocess = "2.0"
+
+# WASM runtime for RuVector (Windows)
+wasmer = "4.3"
+wasmer-compiler-singlepass = "4.3"
+
+# ============================================================================
+# macOS-specific dependencies
+# ============================================================================
+[target.'cfg(target_os = "macos")'.dependencies]
+# macOS uses libc for most system calls - already included above
+
+# ============================================================================
+# Build dependencies
+# ============================================================================
+[target.'cfg(windows)'.build-dependencies]
 embed-resource = "2.4"
 
+# ============================================================================
+# Binaries
+# ============================================================================
+
+# Windows CLI (also compiles on other platforms as a stub)
 [[bin]]
 name = "ruvector-memopt"
 path = "src/main.rs"
 
+# macOS CLI
+[[bin]]
+name = "ruvector-memopt-macos"
+path = "src/macos_main.rs"
+
+# Windows-only binaries
 [[bin]]
 name = "ruvector-memopt-service"
 path = "src/service/main.rs"
@@ -115,6 +144,9 @@ path = "src/tray_main.rs"
 name = "RuVectorTray"
 path = "src/launcher.rs"
 
+# ============================================================================
+# Release profile
+# ============================================================================
 [profile.release]
 opt-level = 3
 lto = true

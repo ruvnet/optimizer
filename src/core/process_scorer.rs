@@ -1,6 +1,6 @@
 //! Process scoring for intelligent trimming decisions
 
-use sysinfo::System;
+use sysinfo::{System, ProcessesToUpdate};
 use std::collections::HashMap;
 
 pub struct ProcessScorer {
@@ -24,7 +24,7 @@ impl ProcessScorer {
     }
 
     pub fn refresh(&mut self) {
-        self.system.refresh_processes();
+        self.system.refresh_processes(ProcessesToUpdate::All, true);
     }
 
     pub fn get_trim_candidates(&self, limit: usize) -> Vec<u32> {
@@ -32,7 +32,7 @@ impl ProcessScorer {
             .processes()
             .iter()
             .filter_map(|(pid, proc)| {
-                let name = proc.name().to_string().to_lowercase();
+                let name = proc.name().to_string_lossy().to_lowercase();
                 let priority = self.priorities.get(&name).copied().unwrap_or(30);
                 if priority == 0 { return None; }
                 Some((pid.as_u32(), proc.memory(), priority))
@@ -45,7 +45,7 @@ impl ProcessScorer {
     pub fn get_memory_by_name(&self, name: &str) -> u64 {
         let name_lower = name.to_lowercase();
         self.system.processes().values()
-            .filter(|p| p.name().to_lowercase().contains(&name_lower))
+            .filter(|p| p.name().to_string_lossy().to_lowercase().contains(&name_lower))
             .map(|p| p.memory())
             .sum()
     }

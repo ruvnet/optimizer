@@ -1,4 +1,8 @@
 //! Real-time memory monitoring
+//!
+//! Currently Windows-only, requires the windows module.
+
+#![cfg(target_os = "windows")]
 
 use std::sync::Arc;
 use std::time::Duration;

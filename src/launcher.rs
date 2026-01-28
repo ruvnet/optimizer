@@ -2,13 +2,18 @@
 //!
 //! This tiny GUI-only executable launches the tray app with no console flash.
 //! It uses CreateProcessW with CREATE_NO_WINDOW flag.
+//! Windows-only binary.
 
-#![windows_subsystem = "windows"]
+#![cfg_attr(windows, windows_subsystem = "windows")]
 
+#[cfg(windows)]
 use std::ffi::OsStr;
+#[cfg(windows)]
 use std::os::windows::ffi::OsStrExt;
+#[cfg(windows)]
 use std::ptr::null_mut;
 
+#[cfg(windows)]
 fn main() {
     // Get path to tray exe (same directory as this launcher)
     let exe_path = std::env::current_exe().unwrap_or_default();
@@ -53,4 +58,9 @@ fn main() {
             let _ = CloseHandle(process_info.hThread);
         }
     }
+}
+
+#[cfg(not(windows))]
+fn main() {
+    eprintln!("Windows launcher only runs on Windows");
 }

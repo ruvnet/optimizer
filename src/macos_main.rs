@@ -1,36 +1,31 @@
-//! RuVector Memory Optimizer - Intelligent memory management for Windows
+//! RuVector Memory Optimizer - macOS CLI
 //!
-//! This is the Windows-specific CLI. For macOS, see macos_main.rs.
+//! Cross-platform memory optimizer for macOS with Apple Silicon support.
 
-#![cfg(target_os = "windows")]
+#![cfg(target_os = "macos")]
 
 use clap::{Parser, Subcommand};
-use std::time::Duration;
-use tracing::{info, Level};
+use tracing::Level;
 use tracing_subscriber::FmtSubscriber;
 
 mod core;
-mod windows;
+mod macos;
 mod neural;
 mod bench;
-mod monitor;
 mod accel;
-mod tray;
 mod algorithms;
+mod platform;
 mod dashboard;
+mod monitor;
+mod security;
 
-use core::config::OptimizerConfig;
-use core::optimizer::IntelligentOptimizer;
-use windows::memory::WindowsMemoryOptimizer;
-use windows::safety::{SafetyConfig, SafetyGuard};
-use bench::runner::BenchmarkRunner;
+use macos::memory::MacMemoryOptimizer;
+use macos::safety::{SafetyConfig, SafetyGuard};
 use bench::advanced::AdvancedBenchmarkRunner;
-use monitor::dashboard::render_dashboard;
-use dashboard::DashboardServer;
 
 #[derive(Parser)]
 #[command(name = "ruvector-memopt")]
-#[command(about = "Intelligent memory optimizer with neural learning", long_about = None)]
+#[command(about = "Intelligent memory optimizer for macOS", long_about = None)]
 struct Cli {
     #[command(subcommand)]
     command: Commands,
@@ -50,15 +45,6 @@ enum Commands {
         dry_run: bool,
     },
 
-    /// Start continuous optimization daemon
-    Daemon {
-        #[arg(short, long, default_value = "60")]
-        interval: u64,
-    },
-
-    /// Run startup optimization mode
-    Startup,
-
     /// Run benchmarks
     Bench {
         #[arg(short, long, default_value = "100")]
@@ -69,19 +55,10 @@ enum Commands {
         advanced: bool,
     },
 
-    /// Show real-time dashboard
-    Dashboard,
-
-    /// Start dashboard server (JSON API)
-    DashboardServer {
-        #[arg(short, long, default_value = "8080")]
-        port: u16,
-    },
-
     /// Show configuration
     Config,
 
-    /// Launch system tray icon
+    /// Launch menu bar app
     Tray,
 
     /// Show CPU/SIMD capabilities
@@ -89,23 +66,14 @@ enum Commands {
 
     /// Analyze processes with PageRank priority scoring
     Pagerank {
-        /// Number of top processes to show
         #[arg(short, long, default_value = "10")]
         top: usize,
     },
 
     /// Show process clusters (MinCut analysis)
     Clusters {
-        /// Maximum clusters to show
         #[arg(short, long, default_value = "5")]
         max: usize,
-    },
-
-    /// Analyze memory patterns (Spectral analysis)
-    Patterns {
-        /// Sample duration in seconds
-        #[arg(short, long, default_value = "30")]
-        duration: u64,
     },
 }
 
@@ -117,86 +85,64 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .with_target(false)
         .finish();
     tracing::subscriber::set_global_default(subscriber)?;
-    
+
     let cli = Cli::parse();
-    
+
     match cli.command {
         Commands::Status => {
-            let status = WindowsMemoryOptimizer::get_memory_status()?;
+            let status = MacMemoryOptimizer::get_memory_status()?;
             println!("Memory Status:");
             println!("  Total:     {:.0} MB", status.total_physical_mb);
             println!("  Available: {:.0} MB", status.available_physical_mb);
             println!("  Used:      {:.0} MB", status.used_physical_mb());
             println!("  Load:      {}%", status.memory_load_percent);
-            println!("  Pressure:  {}", 
-                if status.is_critical() { "CRITICAL" }
-                else if status.is_high_pressure() { "HIGH" }
-                else { "Normal" }
+            println!("  Swap:      {:.0}/{:.0} MB",
+                status.total_swap_mb - status.available_swap_mb,
+                status.total_swap_mb);
+            println!("  Pressure:  {} ({})",
+                match status.pressure_level {
+                    0 => "Normal",
+                    1 => "WARN",
+                    2 => "CRITICAL",
+                    3 => "URGENT",
+                    _ => "EXTREME",
+                },
+                if status.is_apple_silicon { "Apple Silicon" } else { "Intel" }
             );
         }
-        
+
         Commands::Optimize { aggressive, dry_run } => {
-            let config = OptimizerConfig {
-                aggressive_mode: aggressive,
-                ..Default::default()
-            };
-            
             let mut safety = SafetyGuard::new(SafetyConfig {
                 dry_run,
                 ..Default::default()
             });
-            
-            let status = WindowsMemoryOptimizer::get_memory_status()?;
-            
+
+            let status = MacMemoryOptimizer::get_memory_status()?;
+
             if let Err(e) = safety.check_safe(status.available_physical_mb) {
                 println!("Safety check failed: {}", e);
                 return Ok(());
             }
-            
+
             if dry_run {
                 println!("DRY RUN - No changes will be made");
+                println!("Would run: {} optimization", if aggressive { "aggressive (purge)" } else { "standard (madvise hints)" });
+                return Ok(());
             }
-            
-            let optimizer = WindowsMemoryOptimizer::new();
+
+            let optimizer = MacMemoryOptimizer::new();
             let result = optimizer.optimize(aggressive)?;
-            
+
             safety.record_attempt(result.freed_mb >= 0.0);
-            
+
             println!("Optimization complete:");
+            println!("  Method:    {:?}", result.method);
             println!("  Freed:     {:.1} MB", result.freed_mb);
-            println!("  Trimmed:   {} processes", result.processes_trimmed);
+            println!("  Before:    {:.1} MB available", result.before_available_mb);
+            println!("  After:     {:.1} MB available", result.after_available_mb);
             println!("  Duration:  {} ms", result.duration_ms);
         }
-        
-        Commands::Daemon { interval } => {
-            info!("Starting optimization daemon (interval: {}s)", interval);
-            
-            let config = OptimizerConfig::default();
-            let mut optimizer = IntelligentOptimizer::new(config);
-            
-            optimizer.run_loop(Duration::from_secs(interval)).await;
-        }
-        
-        Commands::Startup => {
-            info!("Running startup optimization");
-            
-            let config = OptimizerConfig {
-                startup_mode: true,
-                ..Default::default()
-            };
-            let mut optimizer = IntelligentOptimizer::new(config);
-            
-            match optimizer.startup_optimize().await {
-                Ok(result) => {
-                    println!("Startup optimization complete:");
-                    println!("  Freed: {:.1} MB", result.freed_mb);
-                }
-                Err(e) => {
-                    println!("Startup optimization failed: {}", e);
-                }
-            }
-        }
-        
+
         Commands::Bench { iterations, advanced } => {
             if advanced {
                 println!("Running advanced RuVector algorithm benchmarks ({} iterations)...", iterations);
@@ -205,49 +151,43 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let suite = runner.run_all();
                 suite.print_summary();
             } else {
-                println!("Running benchmarks ({} iterations)...", iterations);
+                println!("Running basic memory benchmarks ({} iterations)...", iterations);
 
-                let runner = BenchmarkRunner::new(iterations);
-                let results = runner.run_all();
-
-                for result in results {
-                    println!("\nBenchmark: {}", result.name);
-                    println!("  Iterations:  {}", result.iterations);
-                    println!("  Total:       {} ms", result.total_ms);
-                    println!("  Avg:         {:.3} ms", result.avg_ms);
-                    println!("  Min:         {} ms", result.min_ms);
-                    println!("  Max:         {} ms", result.max_ms);
-                    println!("  Ops/sec:     {:.0}", result.ops_per_sec);
+                // Basic memory operation benchmark
+                let mut times = Vec::with_capacity(iterations);
+                for _ in 0..iterations {
+                    let start = std::time::Instant::now();
+                    let _ = MacMemoryOptimizer::get_memory_status();
+                    times.push(start.elapsed().as_micros());
                 }
+
+                let avg = times.iter().sum::<u128>() as f64 / times.len() as f64;
+                let min = times.iter().min().unwrap_or(&0);
+                let max = times.iter().max().unwrap_or(&0);
+
+                println!("\nMemory Status Query:");
+                println!("  Avg: {:.2}µs", avg);
+                println!("  Min: {}µs", min);
+                println!("  Max: {}µs", max);
 
                 println!("\nTip: Run with --advanced for MinCut, PageRank, Sketch, and Spectral benchmarks");
             }
         }
-        
-        Commands::Dashboard => {
-            println!("Starting real-time dashboard (Ctrl+C to exit)...\n");
-            
-            let metrics = bench::metrics::BenchmarkMetrics::new();
-            
-            loop {
-                if let Ok(status) = WindowsMemoryOptimizer::get_memory_status() {
-                    // Clear screen
-                    print!("\x1B[2J\x1B[1;1H");
-                    println!("{}", render_dashboard(&status, &metrics.summary()));
-                }
-                tokio::time::sleep(Duration::from_secs(1)).await;
-            }
-        }
-        
+
         Commands::Config => {
-            let config = OptimizerConfig::default();
-            println!("Current Configuration:");
-            println!("{}", toml::to_string_pretty(&config)?);
+            println!("macOS Configuration:");
+            println!("  Apple Silicon: {}", if cfg!(target_arch = "aarch64") { "Yes" } else { "No" });
+            println!("  Sudo Access:   {}", if unsafe { libc::geteuid() == 0 } { "Yes" } else { "No" });
+            println!("\nOptimization Methods:");
+            println!("  - purge (requires sudo): Clear file system caches");
+            println!("  - madvise hints: Suggest memory cleanup to kernel");
+            println!("\nFor full optimization, run with sudo:");
+            println!("  sudo ruvector-memopt optimize --aggressive");
         }
 
         Commands::Tray => {
-            println!("Starting system tray icon...");
-            let tray_app = tray::TrayApp::new();
+            println!("Starting menu bar app...");
+            let tray_app = macos::tray::MacTrayApp::new();
             if let Err(e) = tray_app.run() {
                 eprintln!("Tray error: {}", e);
             }
@@ -265,11 +205,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             println!("  Speedup:      {:.2}x", speedup);
         }
 
-        Commands::DashboardServer { port } => {
-            let server = DashboardServer::new();
-            server.serve(port).await?;
-        }
-
         Commands::Pagerank { top } => {
             println!("Analyzing processes with PageRank...\n");
 
@@ -282,7 +217,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             let candidates = pagerank.get_trim_candidates(top);
             let critical = pagerank.get_critical_processes(top);
 
-            println!("📉 LOW PRIORITY (trim candidates):");
+            println!("LOW PRIORITY (trim candidates):");
             println!("┌─────────┬────────────────────────────┬──────────────┐");
             println!("│   PID   │ Process                    │ PageRank     │");
             println!("├─────────┼────────────────────────────┼──────────────┤");
@@ -295,7 +230,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
             println!("└─────────┴────────────────────────────┴──────────────┘");
 
-            println!("\n📈 HIGH PRIORITY (preserve):");
+            println!("\nHIGH PRIORITY (preserve):");
             println!("┌─────────┬────────────────────────────┬──────────────┐");
             println!("│   PID   │ Process                    │ PageRank     │");
             println!("├─────────┼────────────────────────────┼──────────────┤");
@@ -331,7 +266,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 clusters.len(), stats.total_processes, stats.total_edges);
 
             for cluster in &clusters {
-                println!("📦 Cluster {} ({} processes, {:.1} MB, connectivity: {:.2})",
+                println!("Cluster {} ({} processes, {:.1} MB, connectivity: {:.2})",
                     cluster.id, cluster.processes.len(), cluster.total_memory_mb, cluster.connectivity);
 
                 let trim_order = clusterer.get_trim_order(cluster);
@@ -352,46 +287,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 println!();
             }
         }
-
-        Commands::Patterns { duration } => {
-            println!("Analyzing memory patterns for {} seconds...\n", duration);
-
-            let mut analyzer = algorithms::SpectralAnalyzer::new(duration as usize);
-
-            for i in 0..duration {
-                if let Ok(status) = WindowsMemoryOptimizer::get_memory_status() {
-                    let usage = status.memory_load_percent as f64 / 100.0;
-                    analyzer.add_sample(usage);
-
-                    print!("\rSampling: {}/{} ({}%)", i + 1, duration, status.memory_load_percent);
-                    std::io::Write::flush(&mut std::io::stdout())?;
-                }
-                tokio::time::sleep(Duration::from_secs(1)).await;
-            }
-
-            println!("\n\n📊 Spectral Analysis Results:\n");
-
-            let stats = analyzer.stats();
-            let rec = analyzer.get_recommendation();
-
-            println!("Pattern Classification: {:?}", stats.classification);
-            println!("Mean Usage:            {:.1}%", stats.mean * 100.0);
-            println!("Variance:              {:.4}", stats.variance);
-            println!("Trend:                 {:.4} ({})",
-                stats.trend,
-                if stats.trend > 0.01 { "increasing" }
-                else if stats.trend < -0.01 { "decreasing" }
-                else { "stable" });
-            println!("Dominant Frequency:    bin {}", stats.dominant_frequency);
-
-            println!("\n🎯 Recommendation:");
-            println!("   Action:     {:?}", rec.action);
-            println!("   Confidence: {:.0}%", rec.confidence * 100.0);
-            println!("   Reason:     {}", rec.reason);
-            if rec.predicted_relief_mb > 0 {
-                println!("   Est. relief: {} MB", rec.predicted_relief_mb);
-            }
-        }
     }
 
     Ok(())
@@ -403,13 +298,4 @@ fn truncate(s: &str, max: usize) -> String {
     } else {
         format!("{}...", &s[..max - 3])
     }
-}
-
-// Stub main for non-Windows platforms
-#[cfg(not(target_os = "windows"))]
-fn main() {
-    eprintln!("This binary is Windows-only.");
-    eprintln!("On macOS, please build and run the macOS-specific binary:");
-    eprintln!("  cargo build --release --bin ruvector-memopt-macos");
-    std::process::exit(1);
 }

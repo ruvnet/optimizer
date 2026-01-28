@@ -4,7 +4,9 @@
 //! or native terminal dashboard.
 
 pub mod data;
+#[cfg(target_os = "windows")]
 pub mod server;
 
 pub use data::{DashboardData, DashboardUpdate, SystemMetrics};
+#[cfg(target_os = "windows")]
 pub use server::DashboardServer;

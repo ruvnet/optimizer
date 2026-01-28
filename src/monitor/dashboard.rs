@@ -1,4 +1,8 @@
 //! Simple text-based dashboard
+//!
+//! Currently Windows-only, requires the windows module.
+
+#![cfg(target_os = "windows")]
 
 use crate::windows::memory::MemoryStatus;
 use crate::bench::metrics::MetricsSummary;

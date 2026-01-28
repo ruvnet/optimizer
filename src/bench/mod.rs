@@ -7,6 +7,7 @@
 //! - Spectral pattern analysis
 
 pub mod metrics;
+#[cfg(target_os = "windows")]
 pub mod runner;
 pub mod advanced;
 

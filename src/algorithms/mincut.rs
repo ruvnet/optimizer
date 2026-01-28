@@ -4,7 +4,7 @@
 //! Optimizing related processes together improves cache coherence.
 
 use std::collections::{HashMap, HashSet, VecDeque};
-use sysinfo::System;
+use sysinfo::{System, ProcessesToUpdate};
 
 /// Edge in the process graph
 #[derive(Debug, Clone)]
@@ -55,9 +55,9 @@ impl MinCutClusterer {
             }
 
             // Same-name processes (likely related instances)
-            let name = process.name().to_lowercase();
+            let name = process.name().to_string_lossy().to_lowercase();
             for (other_pid, other_proc) in system.processes() {
-                if other_pid != pid && other_proc.name().to_lowercase() == name {
+                if other_pid != pid && other_proc.name().to_string_lossy().to_lowercase() == name {
                     self.add_edge(pid_u32, other_pid.as_u32(), 0.5);
                 }
             }

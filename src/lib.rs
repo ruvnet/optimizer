@@ -1,7 +1,12 @@
 //! RuVector Memory Optimizer
 //!
-//! An intelligent memory optimizer for Windows that leverages RuVector neural
+//! An intelligent cross-platform memory optimizer that leverages RuVector neural
 //! capabilities for smart optimization decisions.
+//!
+//! ## Platforms
+//!
+//! - **Windows**: Full optimization via Win32 APIs
+//! - **macOS**: Memory pressure hints, purge command, Apple Silicon support
 //!
 //! ## Features
 //!
@@ -10,7 +15,7 @@
 //! - **Adaptive Strategy**: MinCut control for mode switching
 //! - **Anti-Forgetting**: EWC prevents losing good strategies
 //! - **Real-time Monitoring**: Live metrics dashboard
-//! - **Windows Service**: Background service support
+//! - **System Tray/Menu Bar**: Background optimization
 //! - **Security**: Privilege management and input validation
 //!
 //! ## Safety
@@ -21,27 +26,48 @@
 //! - Dry-run mode for testing
 
 pub mod core;
-pub mod windows;
 pub mod neural;
 pub mod bench;
 pub mod monitor;
 pub mod security;
 pub mod algorithms;
 pub mod dashboard;
+pub mod accel;
+pub mod platform;
 
-// Re-exports
+// Platform-specific modules
+#[cfg(target_os = "windows")]
+pub mod windows;
+#[cfg(target_os = "windows")]
+pub mod tray;
+#[cfg(target_os = "windows")]
+pub mod browser;
+
+#[cfg(target_os = "macos")]
+pub mod macos;
+
+// Re-exports - Core
 pub use core::config::OptimizerConfig;
+#[cfg(target_os = "windows")]
 pub use core::optimizer::IntelligentOptimizer;
+#[cfg(target_os = "windows")]
 pub use neural::engine::NeuralDecisionEngine;
+#[cfg(target_os = "windows")]
 pub use monitor::realtime::RealtimeMonitor;
-pub use windows::safety::{SafetyConfig, SafetyGuard};
-pub use security::privileges::PrivilegeManager;
 pub use algorithms::{MinCutClusterer, ProcessPageRank, CountMinSketch, SpectralAnalyzer};
 pub use bench::{AdvancedBenchmarkRunner, BenchmarkSuite};
-pub use dashboard::{DashboardServer, DashboardData};
-pub mod accel;
-pub mod tray;
-pub mod browser;
+pub use dashboard::DashboardData;
+#[cfg(target_os = "windows")]
+pub use dashboard::DashboardServer;
+
+// Platform-specific re-exports
+#[cfg(target_os = "windows")]
+pub use windows::safety::{SafetyConfig, SafetyGuard};
+#[cfg(target_os = "windows")]
+pub use security::privileges::PrivilegeManager;
+
+#[cfg(target_os = "macos")]
+pub use macos::safety::{SafetyConfig, SafetyGuard};
 
 // AI Mode - optional GPU/VRAM management and AI workload optimization
 #[cfg(feature = "ai")]
