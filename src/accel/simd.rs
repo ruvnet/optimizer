@@ -131,25 +131,32 @@ impl SimdOptimizer {
     /// Benchmark SIMD vs scalar
     pub fn benchmark(&self, dim: usize, iterations: usize) -> (f64, f64, f64) {
         use std::time::Instant;
+        use std::hint::black_box;
 
         let a: Vec<f32> = (0..dim).map(|i| i as f32 * 0.1).collect();
         let b: Vec<f32> = (0..dim).map(|i| (dim - i) as f32 * 0.1).collect();
 
+        // Warmup
+        for _ in 0..100 {
+            let _ = black_box(self.euclidean_distance_scalar(black_box(&a), black_box(&b)));
+        }
+
         // Scalar benchmark
         let start = Instant::now();
         for _ in 0..iterations {
-            let _ = self.euclidean_distance_scalar(&a, &b);
+            let _ = black_box(self.euclidean_distance_scalar(black_box(&a), black_box(&b)));
         }
         let scalar_time = start.elapsed().as_secs_f64();
 
-        // SIMD benchmark
+        // SIMD benchmark (on ARM, this also uses scalar path but auto-vectorized by LLVM)
         let start = Instant::now();
         for _ in 0..iterations {
-            let _ = self.euclidean_distance(&a, &b);
+            let _ = black_box(self.euclidean_distance(black_box(&a), black_box(&b)));
         }
         let simd_time = start.elapsed().as_secs_f64();
 
-        let speedup = scalar_time / simd_time;
+        // Avoid NaN/Inf
+        let speedup = if simd_time > 0.0 { scalar_time / simd_time } else { 1.0 };
         (scalar_time, simd_time, speedup)
     }
 

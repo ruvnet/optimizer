@@ -33,8 +33,8 @@ pub struct MinCutClusterer {
 impl MinCutClusterer {
     pub fn new() -> Self {
         Self {
-            adjacency: HashMap::new(),
-            process_memory: HashMap::new(),
+            adjacency: HashMap::with_capacity(512),
+            process_memory: HashMap::with_capacity(512),
             min_cluster_size: 2,
         }
     }
@@ -44,7 +44,9 @@ impl MinCutClusterer {
         self.adjacency.clear();
         self.process_memory.clear();
 
-        // Build edges based on parent-child relationships and shared resources
+        // Phase 1: Collect process info and build name -> PIDs index (O(n))
+        let mut name_groups: HashMap<String, Vec<u32>> = HashMap::new();
+
         for (pid, process) in system.processes() {
             let pid_u32 = pid.as_u32();
             self.process_memory.insert(pid_u32, process.memory());
@@ -54,12 +56,18 @@ impl MinCutClusterer {
                 self.add_edge(pid_u32, parent_pid.as_u32(), 1.0);
             }
 
-            // Same-name processes (likely related instances)
+            // Index by name for O(n) same-name grouping
             let name = process.name().to_string_lossy().to_lowercase();
-            for (other_pid, other_proc) in system.processes() {
-                if other_pid != pid && other_proc.name().to_string_lossy().to_lowercase() == name {
-                    self.add_edge(pid_u32, other_pid.as_u32(), 0.5);
-                }
+            name_groups.entry(name).or_default().push(pid_u32);
+        }
+
+        // Phase 2: Connect same-name processes (O(n) total across all groups)
+        for (_name, pids) in &name_groups {
+            if pids.len() < 2 { continue; }
+            // Connect each to the first (star topology) instead of all-pairs O(k^2)
+            let hub = pids[0];
+            for &pid in &pids[1..] {
+                self.add_edge(hub, pid, 0.5);
             }
         }
     }

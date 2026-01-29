@@ -18,9 +18,13 @@ pub struct AlgorithmBenchmark {
     pub name: String,
     pub iterations: usize,
     pub total_ms: u64,
+    pub total_ns: u128,
     pub avg_us: f64,
+    pub avg_ns: f64,
     pub min_us: u64,
+    pub min_ns: u64,
     pub max_us: u64,
+    pub max_ns: u64,
     pub ops_per_sec: f64,
     pub memory_bytes: usize,
 }
@@ -149,35 +153,40 @@ impl AdvancedBenchmarkRunner {
         self.create_result("PageRank", times, total, std::mem::size_of::<ProcessPageRank>())
     }
 
-    /// Benchmark Count-Min Sketch add operations
+    /// Benchmark Count-Min Sketch add operations (batch for sub-µs precision)
     fn bench_sketch_add(&self) -> AlgorithmBenchmark {
         println!("📊 Count-Min Sketch (Add)");
 
         let mut sketch = CountMinSketch::new(0.01, 0.001);
+        let batch = 1000; // batch ops to get measurable time
 
         // Warmup
-        for i in 0..self.warmup {
+        for i in 0..self.warmup * batch {
             sketch.add(i as u64);
         }
 
-        let mut times = Vec::with_capacity(self.iterations);
+        let mut times_ns = Vec::with_capacity(self.iterations);
         let start = Instant::now();
 
         for i in 0..self.iterations {
             let iter_start = Instant::now();
-            sketch.add((i % 1000) as u64);
-            times.push(iter_start.elapsed().as_nanos() as u64 / 1000);
+            for j in 0..batch {
+                sketch.add(((i * batch + j) % 10000) as u64);
+            }
+            // store per-op nanoseconds
+            times_ns.push(iter_start.elapsed().as_nanos() as u64 / batch as u64);
         }
 
-        let total = start.elapsed().as_millis() as u64;
-        self.create_result("Sketch Add", times, total, sketch.memory_usage())
+        let total_ns = start.elapsed().as_nanos();
+        self.create_result_ns("Sketch Add", times_ns, total_ns, self.iterations * batch, sketch.memory_usage())
     }
 
-    /// Benchmark Count-Min Sketch query operations
+    /// Benchmark Count-Min Sketch query operations (batch for sub-µs precision)
     fn bench_sketch_query(&self) -> AlgorithmBenchmark {
         println!("📊 Count-Min Sketch (Query)");
 
         let mut sketch = CountMinSketch::new(0.01, 0.001);
+        let batch = 1000;
 
         // Pre-populate
         for i in 0..10000 {
@@ -185,21 +194,23 @@ impl AdvancedBenchmarkRunner {
         }
 
         // Warmup
-        for i in 0..self.warmup {
+        for i in 0..self.warmup * batch {
             let _ = sketch.estimate(i as u64);
         }
 
-        let mut times = Vec::with_capacity(self.iterations);
+        let mut times_ns = Vec::with_capacity(self.iterations);
         let start = Instant::now();
 
         for i in 0..self.iterations {
             let iter_start = Instant::now();
-            let _ = sketch.estimate((i % 10000) as u64);
-            times.push(iter_start.elapsed().as_nanos() as u64 / 1000);
+            for j in 0..batch {
+                let _ = sketch.estimate(((i * batch + j) % 10000) as u64);
+            }
+            times_ns.push(iter_start.elapsed().as_nanos() as u64 / batch as u64);
         }
 
-        let total = start.elapsed().as_millis() as u64;
-        self.create_result("Sketch Query", times, total, sketch.memory_usage())
+        let total_ns = start.elapsed().as_nanos();
+        self.create_result_ns("Sketch Query", times_ns, total_ns, self.iterations * batch, sketch.memory_usage())
     }
 
     /// Benchmark Spectral Analysis
@@ -218,7 +229,7 @@ impl AdvancedBenchmarkRunner {
             let _ = analyzer.classify();
         }
 
-        let mut times = Vec::with_capacity(self.iterations);
+        let mut times_ns = Vec::with_capacity(self.iterations);
         let start = Instant::now();
 
         for i in 0..self.iterations {
@@ -226,11 +237,11 @@ impl AdvancedBenchmarkRunner {
             analyzer.add_sample(0.5 + (i as f64 * 0.1).sin() * 0.3);
             let _ = analyzer.classify();
             let _ = analyzer.get_recommendation();
-            times.push(iter_start.elapsed().as_micros() as u64);
+            times_ns.push(iter_start.elapsed().as_nanos() as u64);
         }
 
-        let total = start.elapsed().as_millis() as u64;
-        self.create_result("Spectral", times, total, std::mem::size_of::<SpectralAnalyzer>())
+        let total_ns = start.elapsed().as_nanos();
+        self.create_result_ns("Spectral", times_ns, total_ns, self.iterations, std::mem::size_of::<SpectralAnalyzer>())
     }
 
     /// Benchmark baseline process scorer (for comparison)
@@ -264,38 +275,63 @@ impl AdvancedBenchmarkRunner {
     fn create_result(
         &self,
         name: &str,
-        times: Vec<u64>,
+        times_us: Vec<u64>,
         total_ms: u64,
         memory_bytes: usize,
     ) -> AlgorithmBenchmark {
-        let min = times.iter().min().copied().unwrap_or(0);
-        let max = times.iter().max().copied().unwrap_or(0);
-        let avg = if !times.is_empty() {
-            times.iter().sum::<u64>() as f64 / times.len() as f64
+        let total_ns = total_ms as u128 * 1_000_000;
+        let times_ns: Vec<u64> = times_us.iter().map(|t| t * 1000).collect();
+        self.create_result_ns(name, times_ns, total_ns, self.iterations, memory_bytes)
+    }
+
+    fn create_result_ns(
+        &self,
+        name: &str,
+        times_ns: Vec<u64>,
+        total_ns: u128,
+        total_ops: usize,
+        memory_bytes: usize,
+    ) -> AlgorithmBenchmark {
+        let min_ns = times_ns.iter().min().copied().unwrap_or(0);
+        let max_ns = times_ns.iter().max().copied().unwrap_or(0);
+        let avg_ns = if !times_ns.is_empty() {
+            times_ns.iter().sum::<u64>() as f64 / times_ns.len() as f64
         } else {
             0.0
         };
-        let ops = if total_ms > 0 {
-            self.iterations as f64 / (total_ms as f64 / 1000.0)
+        let ops = if total_ns > 0 {
+            total_ops as f64 / (total_ns as f64 / 1_000_000_000.0)
         } else {
             0.0
         };
 
         let result = AlgorithmBenchmark {
             name: name.to_string(),
-            iterations: self.iterations,
-            total_ms,
-            avg_us: avg,
-            min_us: min,
-            max_us: max,
+            iterations: total_ops,
+            total_ms: (total_ns / 1_000_000) as u64,
+            total_ns,
+            avg_us: avg_ns / 1000.0,
+            avg_ns,
+            min_us: min_ns / 1000,
+            min_ns,
+            max_us: max_ns / 1000,
+            max_ns,
             ops_per_sec: ops,
             memory_bytes,
         };
 
-        println!(
-            "   avg: {:.2}µs | min: {}µs | max: {}µs | {:.0} ops/sec | {} bytes",
-            result.avg_us, result.min_us, result.max_us, result.ops_per_sec, result.memory_bytes
-        );
+        // Smart display: use ns for sub-µs, µs for sub-ms
+        if result.avg_ns < 1000.0 {
+            println!(
+                "   avg: {:.1}ns | min: {}ns | max: {}ns | {:.0} ops/sec | {}",
+                result.avg_ns, result.min_ns, result.max_ns, result.ops_per_sec, format_bytes(result.memory_bytes)
+            );
+        } else {
+            println!(
+                "   avg: {:.2}µs | min: {}µs | max: {}µs | {:.0} ops/sec | {}",
+                result.avg_us, result.min_us, result.max_us, result.ops_per_sec, format_bytes(result.memory_bytes)
+            );
+        }
 
         result
     }
@@ -308,9 +344,9 @@ impl BenchmarkSuite {
         println!("📈 BENCHMARK SUMMARY");
         println!("{}", "=".repeat(60));
 
-        println!("\n┌─────────────────────┬───────────┬───────────┬────────────┐");
-        println!("│ Algorithm           │  Avg (µs) │  Ops/sec  │  Memory    │");
-        println!("├─────────────────────┼───────────┼───────────┼────────────┤");
+        println!("\n┌─────────────────────┬────────────────┬─────────────┬────────────┐");
+        println!("│ Algorithm           │  Avg Time      │    Ops/sec  │  Memory    │");
+        println!("├─────────────────────┼────────────────┼─────────────┼────────────┤");
 
         for bench in [
             &self.mincut,
@@ -320,16 +356,30 @@ impl BenchmarkSuite {
             &self.spectral,
             &self.baseline_scorer,
         ] {
+            let time_str = if bench.avg_ns < 1000.0 {
+                format!("{:>9.1} ns", bench.avg_ns)
+            } else if bench.avg_us < 1000.0 {
+                format!("{:>9.2} µs", bench.avg_us)
+            } else {
+                format!("{:>9.2} ms", bench.avg_us / 1000.0)
+            };
+            let ops_str = if bench.ops_per_sec >= 1_000_000.0 {
+                format!("{:.2}M", bench.ops_per_sec / 1_000_000.0)
+            } else if bench.ops_per_sec >= 1_000.0 {
+                format!("{:.1}K", bench.ops_per_sec / 1_000.0)
+            } else {
+                format!("{:.0}", bench.ops_per_sec)
+            };
             println!(
-                "│ {:19} │ {:>9.2} │ {:>9.0} │ {:>10} │",
+                "│ {:19} │ {:>14} │ {:>11} │ {:>10} │",
                 bench.name,
-                bench.avg_us,
-                bench.ops_per_sec,
+                time_str,
+                ops_str,
                 format_bytes(bench.memory_bytes)
             );
         }
 
-        println!("└─────────────────────┴───────────┴───────────┴────────────┘");
+        println!("└─────────────────────┴────────────────┴─────────────┴────────────┘");
 
         println!("\n📊 IMPROVEMENT ANALYSIS");
         println!("├── PageRank vs Baseline: {:.2}x", self.improvement_summary.pagerank_vs_baseline);

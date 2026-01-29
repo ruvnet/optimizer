@@ -12,6 +12,8 @@ pub struct ProcessPageRank {
     scores: HashMap<u32, f64>,
     /// Adjacency list (outgoing edges)
     outlinks: HashMap<u32, Vec<u32>>,
+    /// Reverse adjacency list (incoming edges) - for O(1) inlink lookup
+    inlinks: HashMap<u32, Vec<u32>>,
     /// Damping factor (typically 0.85)
     damping: f64,
     /// Convergence threshold
@@ -25,6 +27,7 @@ impl ProcessPageRank {
         Self {
             scores: HashMap::new(),
             outlinks: HashMap::new(),
+            inlinks: HashMap::new(),
             damping: 0.85,
             epsilon: 1e-6,
             max_iterations: 100,
@@ -34,6 +37,7 @@ impl ProcessPageRank {
     /// Build the process graph and compute PageRank scores
     pub fn compute(&mut self, system: &System) {
         self.outlinks.clear();
+        self.inlinks.clear();
         self.scores.clear();
 
         let processes: Vec<u32> = system.processes().keys().map(|p| p.as_u32()).collect();
@@ -43,18 +47,36 @@ impl ProcessPageRank {
             return;
         }
 
-        // Build outlink graph (parent -> children)
+        // Build outlink + inlink graphs (parent -> children)
         for (pid, process) in system.processes() {
             let pid_u32 = pid.as_u32();
 
             // Parent points to child (influence flows from parent)
             if let Some(parent_pid) = process.parent() {
+                let parent_u32 = parent_pid.as_u32();
                 self.outlinks
-                    .entry(parent_pid.as_u32())
-                    .or_insert_with(Vec::new)
+                    .entry(parent_u32)
+                    .or_default()
                     .push(pid_u32);
+                // Build reverse index: child -> list of parents pointing to it
+                self.inlinks
+                    .entry(pid_u32)
+                    .or_default()
+                    .push(parent_u32);
             }
         }
+
+        // Pre-compute out-degrees for O(1) lookup
+        let out_degrees: HashMap<u32, f64> = self.outlinks
+            .iter()
+            .map(|(&k, v)| (k, v.len() as f64))
+            .collect();
+
+        // Collect dangling nodes (no outlinks)
+        let dangling_nodes: Vec<u32> = processes.iter()
+            .filter(|p| !self.outlinks.contains_key(p))
+            .copied()
+            .collect();
 
         // Initialize scores uniformly
         let initial_score = 1.0 / n as f64;
@@ -62,31 +84,33 @@ impl ProcessPageRank {
             self.scores.insert(pid, initial_score);
         }
 
+        let n_f64 = n as f64;
+
         // Power iteration
         for iteration in 0..self.max_iterations {
-            let mut new_scores: HashMap<u32, f64> = HashMap::new();
+            let mut new_scores: HashMap<u32, f64> = HashMap::with_capacity(n);
             let mut max_delta = 0.0f64;
 
+            // Pre-compute dangling node contribution (sum of their scores / n)
+            let dangling_sum: f64 = dangling_nodes.iter()
+                .map(|p| self.scores.get(p).unwrap_or(&0.0))
+                .sum();
+            let dangling_contrib = self.damping * dangling_sum / n_f64;
+
             // Teleport component (random jump)
-            let teleport = (1.0 - self.damping) / n as f64;
+            let teleport = (1.0 - self.damping) / n_f64;
+            let base_score = teleport + dangling_contrib;
 
             for &pid in &processes {
-                let mut score = teleport;
+                let mut score = base_score;
 
-                // Sum contributions from all processes that link to this one
-                for (&source, targets) in &self.outlinks {
-                    if targets.contains(&pid) {
+                // O(in-degree) instead of O(m): only iterate inlinks to this node
+                if let Some(sources) = self.inlinks.get(&pid) {
+                    for &source in sources {
                         let source_score = self.scores.get(&source).unwrap_or(&0.0);
-                        let out_degree = targets.len() as f64;
-                        score += self.damping * source_score / out_degree;
+                        let out_deg = out_degrees.get(&source).unwrap_or(&1.0);
+                        score += self.damping * source_score / out_deg;
                     }
-                }
-
-                // Handle dangling nodes (no outlinks)
-                if !self.outlinks.contains_key(&pid) {
-                    // Distribute to all nodes
-                    let dangling_contrib = self.damping * self.scores.get(&pid).unwrap_or(&0.0) / n as f64;
-                    score += dangling_contrib;
                 }
 
                 let old_score = self.scores.get(&pid).unwrap_or(&0.0);

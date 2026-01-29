@@ -13,6 +13,7 @@ pub struct CpuCapabilities {
     pub has_avx512: bool,
     pub has_avx_vnni: bool,
     pub has_npu: bool,
+    pub has_neon: bool,
     pub core_count: usize,
     pub cache_line_size: usize,
 }
@@ -27,6 +28,7 @@ impl CpuCapabilities {
             has_avx512: false,
             has_avx_vnni: false,
             has_npu: false,
+            has_neon: false,
             core_count: num_cpus::get(),
             cache_line_size: 64,
         };
@@ -42,9 +44,18 @@ impl CpuCapabilities {
 
             // NPU detection (Intel Core Ultra)
             caps.has_npu = Self::detect_intel_npu();
-            caps.vendor = Self::get_vendor();
-            caps.model = Self::get_model();
         }
+
+        #[cfg(target_arch = "aarch64")]
+        {
+            // ARM64 always has NEON
+            caps.has_neon = true;
+            caps.cache_line_size = 128; // Apple Silicon uses 128-byte cache lines
+        }
+
+        // Always detect vendor/model (works on all platforms)
+        caps.vendor = Self::get_vendor();
+        caps.model = Self::get_model();
 
         caps
     }
@@ -81,7 +92,20 @@ impl CpuCapabilities {
     }
 
     #[cfg(not(target_arch = "x86_64"))]
-    fn get_vendor() -> String { "Unknown".into() }
+    fn get_vendor() -> String {
+        #[cfg(target_os = "macos")]
+        {
+            if let Ok(output) = std::process::Command::new("sysctl")
+                .args(["-n", "machdep.cpu.brand_string"])
+                .output()
+            {
+                let s = String::from_utf8_lossy(&output.stdout).trim().to_string();
+                if s.contains("Apple") { return "Apple".into(); }
+                if !s.is_empty() { return s.split_whitespace().next().unwrap_or("Unknown").into(); }
+            }
+        }
+        "Unknown".into()
+    }
 
     #[cfg(target_arch = "x86_64")]
     fn get_model() -> String {
@@ -97,7 +121,27 @@ impl CpuCapabilities {
     }
 
     #[cfg(not(target_arch = "x86_64"))]
-    fn get_model() -> String { "Unknown".into() }
+    fn get_model() -> String {
+        #[cfg(target_os = "macos")]
+        {
+            if let Ok(output) = std::process::Command::new("sysctl")
+                .args(["-n", "machdep.cpu.brand_string"])
+                .output()
+            {
+                let s = String::from_utf8_lossy(&output.stdout).trim().to_string();
+                if !s.is_empty() { return s; }
+            }
+            // Fallback: hw.model for Apple Silicon
+            if let Ok(output) = std::process::Command::new("sysctl")
+                .args(["-n", "hw.model"])
+                .output()
+            {
+                let s = String::from_utf8_lossy(&output.stdout).trim().to_string();
+                if !s.is_empty() { return format!("Apple {}", s); }
+            }
+        }
+        "Unknown".into()
+    }
 
     /// Get recommended SIMD width for operations
     pub fn recommended_simd_width(&self) -> usize {
@@ -112,19 +156,25 @@ impl CpuCapabilities {
         if self.has_avx512 { 16.0 }
         else if self.has_avx2 { 8.0 }
         else if self.has_avx { 4.0 }
+        else if self.has_neon { 4.0 }  // ARM NEON is 128-bit (4x f32)
         else { 1.0 }
     }
 
     pub fn print_report(&self) {
         println!("CPU Capabilities:");
-        println!("  Vendor:     {}", self.vendor);
-        println!("  Model:      {}", self.model);
+        println!("  Vendor:     {}", if self.vendor.is_empty() { "Unknown" } else { &self.vendor });
+        println!("  Model:      {}", if self.model.is_empty() { "Unknown" } else { &self.model });
         println!("  Cores:      {}", self.core_count);
-        println!("  AVX:        {}", if self.has_avx { "Yes" } else { "No" });
-        println!("  AVX2:       {}", if self.has_avx2 { "Yes (8x SIMD)" } else { "No" });
-        println!("  AVX-512:    {}", if self.has_avx512 { "Yes (16x SIMD)" } else { "No" });
-        println!("  AVX-VNNI:   {}", if self.has_avx_vnni { "Yes (AI Accel)" } else { "No" });
-        println!("  Intel NPU:  {}", if self.has_npu { "Yes (Neural Proc)" } else { "No" });
+        if cfg!(target_arch = "aarch64") {
+            println!("  NEON:       {}", if self.has_neon { "Yes (128-bit SIMD)" } else { "No" });
+            println!("  Cache Line: {} bytes", self.cache_line_size);
+        } else {
+            println!("  AVX:        {}", if self.has_avx { "Yes" } else { "No" });
+            println!("  AVX2:       {}", if self.has_avx2 { "Yes (8x SIMD)" } else { "No" });
+            println!("  AVX-512:    {}", if self.has_avx512 { "Yes (16x SIMD)" } else { "No" });
+            println!("  AVX-VNNI:   {}", if self.has_avx_vnni { "Yes (AI Accel)" } else { "No" });
+            println!("  Intel NPU:  {}", if self.has_npu { "Yes (Neural Proc)" } else { "No" });
+        }
         println!("  Est Speedup: {:.0}x", self.estimated_speedup());
     }
 }
