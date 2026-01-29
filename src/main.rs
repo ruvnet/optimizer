@@ -271,7 +271,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
 
         Commands::Tray => {
-            println!("Starting system tray icon...");
+            // Hide the console window so only the tray icon is visible
+            {
+                use ::windows::Win32::System::Console::FreeConsole;
+                unsafe { let _ = FreeConsole(); }
+            }
             let tray_app = tray::TrayApp::new();
             if let Err(e) = tray_app.run() {
                 eprintln!("Tray error: {}", e);
