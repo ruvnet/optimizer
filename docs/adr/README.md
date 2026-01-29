@@ -14,6 +14,21 @@
 | [ADR-008](ADR-008-llm-inference-optimizer.md) | LLM Inference Optimizer | Proposed | Critical |
 | [ADR-009](ADR-009-memory-music.md) | Memory Music - Generative Audio | Proposed | Low |
 | [ADR-010](ADR-010-data-export-training.md) | Data Export & Training Pipeline | Proposed | High |
+| [ADR-011](ADR-011-macos-port.md) | macOS Port | Accepted | High |
+| [ADR-012](ADR-012-control-center-ui.md) | Control Center UI Framework | Proposed | Critical |
+| [ADR-013](ADR-013-workspace-profiles.md) | Workspace Profiles & Context Switching | Proposed | High |
+| [ADR-014](ADR-014-system-health-score.md) | System Health Score | Proposed | High |
+| [ADR-015](ADR-015-startup-optimizer.md) | Startup Optimizer with PageRank Scoring | Proposed | High |
+| [ADR-016](ADR-016-wsl2-memory-governor.md) | WSL2 Memory Governor | Proposed | High |
+| [ADR-017](ADR-017-build-environment-optimizer.md) | Build Environment Optimizer | Proposed | Medium |
+| [ADR-018](ADR-018-spectral-leak-detector.md) | Spectral Memory Leak Detector | Proposed | High |
+| [ADR-019](ADR-019-predictive-prefetcher.md) | Predictive Prefetcher | Proposed | Medium |
+| [ADR-020](ADR-020-thermal-aware-scheduler.md) | Thermal-Aware Process Scheduler | Proposed | High |
+| [ADR-021](ADR-021-wasm-plugin-marketplace.md) | WASM Plugin Marketplace | Proposed | Medium |
+| [ADR-022](ADR-022-gpu-memory-optimizer.md) | GPU Memory Optimizer | Proposed | Critical |
+| [ADR-023](ADR-023-bloatware-telemetry-silencer.md) | Bloatware & Telemetry Silencer | Proposed | High |
+| [ADR-024](ADR-024-time-travel-system-state.md) | Time-Travel System State | Proposed | Medium |
+| [ADR-025](ADR-025-agentic-desktop-automation.md) | Agentic Desktop Automation | Proposed | High |
 
 ## Overview
 

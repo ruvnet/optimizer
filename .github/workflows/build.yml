@@ -1,0 +1,90 @@
+name: Build and Release
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+    branches: [main]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-msvc
+      
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+      
+      - name: Build Release
+        run: cargo build --release --target x86_64-pc-windows-msvc
+      
+      - name: Run Tests
+        run: cargo test --release
+      
+      - name: Security Audit
+        run: |
+          cargo install cargo-audit
+          cargo audit
+      
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ruvector-memopt-windows
+          path: target/x86_64-pc-windows-msvc/release/ruvector-memopt.exe
+
+  build-installer:
+    needs: build-windows
+    runs-on: windows-latest
+    if: startsWith(github.ref, 'refs/tags/')
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Download Binary
+        uses: actions/download-artifact@v4
+        with:
+          name: ruvector-memopt-windows
+          path: installer/bin
+      
+      - name: Install WiX
+        run: |
+          choco install wixtoolset -y
+          echo "C:\Program Files (x86)\WiX Toolset v3.11\bin" >> $env:GITHUB_PATH
+      
+      - name: Build Installer
+        run: |
+          cd installer
+          candle.exe -nologo installer.wxs -out installer.wixobj
+          light.exe -nologo installer.wixobj -out RuVectorMemOpt-Setup.msi
+      
+      - name: Upload Installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: ruvector-memopt-installer
+          path: installer/RuVectorMemOpt-Setup.msi
+
+  release:
+    needs: [build-windows, build-installer]
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+    permissions:
+      contents: write
+    steps:
+      - name: Download Artifacts
+        uses: actions/download-artifact@v4
+      
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            ruvector-memopt-windows/ruvector-memopt.exe
+            ruvector-memopt-installer/RuVectorMemOpt-Setup.msi
+          generate_release_notes: true
