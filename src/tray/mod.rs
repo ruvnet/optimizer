@@ -1,6 +1,8 @@
 //! System tray icon and menu with automatic optimization and AI Mode settings
 
 mod settings;
+mod dialog;
+mod control_center;
 pub use settings::{TraySettings, AIModeSettings};
 
 use crate::windows::memory::WindowsMemoryOptimizer;
@@ -65,6 +67,7 @@ impl TrayApp {
         let optimize_item = MenuItem::new("Optimize Now", true, None);
         let aggressive_item = MenuItem::new("Deep Clean", true, None);
         let browser_item = MenuItem::new("Optimize Apps (Browsers/Electron)", true, None);
+        let control_center_item = MenuItem::new("Control Center", true, None);
 
         // AI Mode submenu - use saved settings
         let ai_menu = Submenu::new("AI Mode", true);
@@ -111,6 +114,8 @@ impl TrayApp {
         menu.append(&aggressive_item)?;
         menu.append(&browser_item)?;
         menu.append(&PredefinedMenuItem::separator())?;
+        menu.append(&control_center_item)?;
+        menu.append(&PredefinedMenuItem::separator())?;
         menu.append(&ai_menu)?;
         menu.append(&settings_menu)?;
         menu.append(&PredefinedMenuItem::separator())?;
@@ -138,6 +143,7 @@ impl TrayApp {
         let optimize_id = optimize_item.id().clone();
         let aggressive_id = aggressive_item.id().clone();
         let browser_id = browser_item.id().clone();
+        let control_center_id = control_center_item.id().clone();
         let cpu_id = cpu_item.id().clone();
         let quit_id = quit_item.id().clone();
         let auto_id = auto_item.id().clone();
@@ -260,6 +266,8 @@ impl TrayApp {
                 } else if event.id == browser_id {
                     let total_freed_clone = total_freed.clone();
                     run_browser_optimization(total_freed_clone);
+                } else if event.id == control_center_id {
+                    control_center::open(settings.clone());
                 } else if event.id == cpu_id {
                     show_cpu_info();
                 } else if event.id == github_id {
@@ -525,28 +533,31 @@ fn run_browser_optimization(total_freed: Arc<AtomicU32>) {
 }
 
 fn show_cpu_info() {
-    let caps = CpuCapabilities::detect();
-    let msg = format!(
-        "RuVector Memory Optimizer v{}\n\n\
-        CPU: {}\n\n\
-        Cores: {}\n\
-        AVX2: {}\n\
-        AVX-512: {}\n\
-        AVX-VNNI: {}\n\
-        Intel NPU: {}\n\n\
-        Estimated SIMD Speedup: {:.1}x\n\n\
-        GitHub: {}",
-        VERSION,
-        caps.model,
-        caps.core_count,
-        if caps.has_avx2 { "Yes" } else { "No" },
-        if caps.has_avx512 { "Yes" } else { "No" },
-        if caps.has_avx_vnni { "Yes" } else { "No" },
-        if caps.has_npu { "Yes" } else { "No" },
-        caps.estimated_speedup(),
-        GITHUB_URL
-    );
-    show_message_box("System Information", &msg);
+    // Run on background thread to avoid blocking the event loop
+    std::thread::spawn(|| {
+        let caps = CpuCapabilities::detect();
+        let msg = format!(
+            "RuVector Memory Optimizer v{}\n\n\
+            CPU: {}\n\n\
+            Cores: {}\n\
+            AVX2: {}\n\
+            AVX-512: {}\n\
+            AVX-VNNI: {}\n\
+            Intel NPU: {}\n\n\
+            Estimated SIMD Speedup: {:.1}x\n\n\
+            GitHub: {}",
+            VERSION,
+            caps.model,
+            caps.core_count,
+            if caps.has_avx2 { "Yes" } else { "No" },
+            if caps.has_avx512 { "Yes" } else { "No" },
+            if caps.has_avx_vnni { "Yes" } else { "No" },
+            if caps.has_npu { "Yes" } else { "No" },
+            caps.estimated_speedup(),
+            GITHUB_URL
+        );
+        show_message_box("System Information", &msg);
+    });
 }
 
 fn open_github() {
@@ -558,67 +569,18 @@ fn open_github() {
     }
 }
 
-/// Show iOS-style toast notification (non-blocking)
+/// Show macOS-style notification banner (non-blocking, auto-dismiss)
 fn show_notification(title: &str, message: &str, freed_mb: Option<f64>) {
     let title = title.to_string();
     let message = message.to_string();
 
     std::thread::spawn(move || {
         #[cfg(windows)]
-        show_windows_toast(&title, &message, freed_mb);
+        dialog::show_banner(&title, &message, freed_mb);
 
         #[cfg(target_os = "macos")]
         show_macos_notification(&title, &message, freed_mb);
     });
-}
-
-/// Windows toast notification using PowerShell
-#[cfg(windows)]
-fn show_windows_toast(title: &str, message: &str, freed_mb: Option<f64>) {
-    use std::os::windows::process::CommandExt;
-
-    // Create a simple toast notification using PowerShell
-    // This shows an iOS-style banner notification
-    let escaped_title = title.replace("'", "''");
-    let escaped_message = message.replace("'", "''").replace("\n", " ");
-
-    // Build the notification with optional icon based on freed amount
-    let icon = if let Some(freed) = freed_mb {
-        if freed > 100.0 { "✅" }
-        else if freed > 0.0 { "💾" }
-        else { "ℹ️" }
-    } else {
-        "💻"
-    };
-
-    // Use BurntToast if available, fallback to balloon tip
-    let ps_script = format!(
-        r#"
-        try {{
-            Import-Module BurntToast -ErrorAction Stop
-            New-BurntToastNotification -Text '{} {}', '{}' -AppLogo 'C:\Windows\System32\mspaint.exe'
-        }} catch {{
-            Add-Type -AssemblyName System.Windows.Forms
-            $notify = New-Object System.Windows.Forms.NotifyIcon
-            $notify.Icon = [System.Drawing.SystemIcons]::Information
-            $notify.BalloonTipTitle = '{} {}'
-            $notify.BalloonTipText = '{}'
-            $notify.Visible = $true
-            $notify.ShowBalloonTip(3000)
-            Start-Sleep -Milliseconds 3500
-            $notify.Dispose()
-        }}
-        "#,
-        icon, escaped_title, escaped_message,
-        icon, escaped_title, escaped_message
-    );
-
-    const CREATE_NO_WINDOW: u32 = 0x08000000;
-
-    let _ = std::process::Command::new("powershell")
-        .args(["-WindowStyle", "Hidden", "-Command", &ps_script])
-        .creation_flags(CREATE_NO_WINDOW)
-        .spawn();
 }
 
 /// macOS notification using osascript (native Notification Center)
@@ -652,38 +614,13 @@ fn show_macos_notification(title: &str, message: &str, freed_mb: Option<f64>) {
         .spawn();
 }
 
-/// Legacy message box (blocking dialog) - used for detailed info
+/// Show macOS-style info dialog (blocks until dismissed)
 fn show_message_box(title: &str, message: &str) {
-    // Log to console as well
-    println!("\n{}\n{}\n", title, message);
-
     #[cfg(windows)]
-    {
-        use std::ffi::OsStr;
-        use std::os::windows::ffi::OsStrExt;
-        use std::ptr;
-
-        fn to_wide(s: &str) -> Vec<u16> {
-            OsStr::new(s).encode_wide().chain(Some(0)).collect()
-        }
-
-        let title = to_wide(title);
-        let message = to_wide(message);
-
-        unsafe {
-            windows::Win32::UI::WindowsAndMessaging::MessageBoxW(
-                windows::Win32::Foundation::HWND(ptr::null_mut()),
-                windows::core::PCWSTR(message.as_ptr()),
-                windows::core::PCWSTR(title.as_ptr()),
-                windows::Win32::UI::WindowsAndMessaging::MB_OK |
-                windows::Win32::UI::WindowsAndMessaging::MB_ICONINFORMATION,
-            );
-        }
-    }
+    dialog::show_dialog(title, message);
 
     #[cfg(target_os = "macos")]
     {
-        // On macOS, show as a dialog using osascript
         let clean_message = message
             .replace("\\", "\\\\")
             .replace("\"", "\\\"");

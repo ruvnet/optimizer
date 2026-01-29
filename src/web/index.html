@@ -1,0 +1,1134 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="{{THEME}}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RuVector Control Center</title>
+<style>
+/* ── Reset ─────────────────────────────────────────────────────── */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --font:'Segoe UI',system-ui,-apple-system,sans-serif;
+  --mono:'Cascadia Code','Fira Code',Consolas,monospace;
+  --radius:10px;
+  --transition:0.3s ease;
+}
+
+/* ── Dark Theme (default) ──────────────────────────────────────── */
+[data-theme="dark"]{
+  --bg-primary:#0a0e1a;
+  --bg-secondary:#111627;
+  --bg-card:#171d30;
+  --bg-card-hover:#1e2540;
+  --border:#252d45;
+  --text-primary:#e0e4f0;
+  --text-secondary:#8890a8;
+  --text-dim:#505872;
+  --accent-cyan:#4ecdc4;
+  --accent-cyan-dim:rgba(78,205,196,0.15);
+  --accent-amber:#d4a574;
+  --accent-amber-dim:rgba(212,165,116,0.15);
+  --accent-green:#6bcb77;
+  --accent-red:#e06060;
+  --gauge-track:#1a2038;
+  --shadow:0 4px 20px rgba(0,0,0,0.4);
+  --canvas-bg:#0a0e1a;
+}
+
+/* ── Light Theme ───────────────────────────────────────────────── */
+[data-theme="light"]{
+  --bg-primary:#f0f2f5;
+  --bg-secondary:#ffffff;
+  --bg-card:#ffffff;
+  --bg-card-hover:#f5f7fa;
+  --border:#d8dce6;
+  --text-primary:#1a1f36;
+  --text-secondary:#5a6178;
+  --text-dim:#9098b0;
+  --accent-cyan:#2ba89e;
+  --accent-cyan-dim:rgba(43,168,158,0.12);
+  --accent-amber:#b8864a;
+  --accent-amber-dim:rgba(184,134,74,0.12);
+  --accent-green:#3da64e;
+  --accent-red:#c04040;
+  --gauge-track:#e8ecf2;
+  --shadow:0 4px 20px rgba(0,0,0,0.08);
+  --canvas-bg:#e8ecf2;
+}
+
+body{
+  font-family:var(--font);
+  background:var(--bg-primary);
+  color:var(--text-primary);
+  overflow:hidden;
+  height:100vh;width:100vw;
+}
+
+/* ── Layout ────────────────────────────────────────────────────── */
+#app{
+  display:grid;
+  grid-template-columns:300px 1fr;
+  grid-template-rows:48px 1fr 44px;
+  grid-template-areas:"header header" "sidebar main" "footer footer";
+  height:100vh;width:100vw;
+}
+header{
+  grid-area:header;display:flex;align-items:center;
+  justify-content:space-between;padding:0 20px;
+  background:var(--bg-secondary);border-bottom:1px solid var(--border);
+  z-index:10;
+}
+header h1{font-size:13px;font-weight:500;letter-spacing:0.5px;color:var(--text-secondary)}
+header h1 b{color:var(--accent-cyan);font-weight:600}
+.hdr-right{display:flex;align-items:center;gap:10px}
+.theme-btn{
+  background:var(--bg-card);border:1px solid var(--border);
+  color:var(--text-secondary);padding:5px 10px;border-radius:6px;
+  cursor:pointer;font-size:12px;font-family:var(--font);
+  transition:var(--transition);
+}
+.theme-btn:hover{background:var(--bg-card-hover);color:var(--text-primary)}
+
+/* ── Sidebar ───────────────────────────────────────────────────── */
+#sidebar{
+  grid-area:sidebar;background:var(--bg-secondary);
+  border-right:1px solid var(--border);
+  padding:14px;overflow-y:auto;
+  display:flex;flex-direction:column;gap:12px;
+}
+.card{
+  background:var(--bg-card);border:1px solid var(--border);
+  border-radius:var(--radius);padding:14px;transition:var(--transition);
+}
+.card:hover{background:var(--bg-card-hover)}
+.card-title{
+  font-size:10px;font-weight:600;letter-spacing:1px;
+  text-transform:uppercase;color:var(--text-dim);margin-bottom:10px;
+}
+
+/* Memory Gauge */
+.gauge-row{display:flex;align-items:center;gap:14px}
+.gauge-ring{position:relative;width:72px;height:72px;flex-shrink:0}
+.gauge-ring svg{transform:rotate(-90deg)}
+.g-track{fill:none;stroke:var(--gauge-track);stroke-width:6}
+.g-fill{
+  fill:none;stroke:var(--accent-cyan);stroke-width:6;
+  stroke-linecap:round;transition:stroke-dashoffset .6s ease,stroke .3s ease;
+}
+.gauge-lbl{
+  position:absolute;inset:0;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+}
+.gauge-val{font-size:18px;font-weight:600;color:var(--text-primary);line-height:1}
+.gauge-pct{font-size:9px;color:var(--text-dim);margin-top:2px}
+.gauge-stats{display:flex;flex-direction:column;gap:3px}
+.gauge-stats .st{font-size:11px;color:var(--text-secondary)}
+.gauge-stats .st strong{color:var(--text-primary);font-weight:500}
+
+/* CPU */
+.cpu-model{font-size:12px;color:var(--text-primary);margin-bottom:6px;font-weight:500}
+.chips{display:flex;flex-wrap:wrap;gap:5px}
+.chip{font-size:9px;padding:2px 7px;border-radius:4px;font-weight:500;letter-spacing:.3px}
+.chip.on{background:var(--accent-cyan-dim);color:var(--accent-cyan)}
+.chip.off{background:var(--bg-primary);color:var(--text-dim)}
+
+/* Actions */
+.actions{display:flex;flex-direction:column;gap:6px}
+.btn{
+  display:flex;align-items:center;gap:8px;
+  padding:9px 12px;border:1px solid var(--border);border-radius:8px;
+  background:var(--bg-card);color:var(--text-primary);
+  font-size:12px;font-family:var(--font);cursor:pointer;transition:var(--transition);
+}
+.btn:hover{background:var(--accent-cyan-dim);border-color:var(--accent-cyan)}
+.btn:disabled{opacity:.5;cursor:default}
+.btn .ico{font-size:14px}
+
+/* Process List */
+.proc-list{max-height:200px;overflow-y:auto}
+.proc-row{
+  display:flex;justify-content:space-between;align-items:center;
+  padding:5px 0;border-bottom:1px solid var(--border);font-size:11px;
+}
+.proc-row:last-child{border-bottom:none}
+.proc-name{color:var(--text-primary);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.proc-mem{color:var(--accent-amber);font-family:var(--mono);font-size:10px;margin-left:8px}
+
+/* ── Main (Three.js) ──────────────────────────────────────────── */
+#main{
+  grid-area:main;position:relative;
+  background:var(--canvas-bg);overflow:hidden;
+}
+#world-canvas{width:100%;height:100%;display:block}
+#center-label{
+  position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+  pointer-events:none;text-align:center;z-index:2;
+}
+#center-label .title{
+  font-size:13px;font-weight:700;letter-spacing:3px;
+  text-transform:uppercase;color:var(--accent-cyan);
+  animation:labelPulse 3s ease-in-out infinite;
+  text-shadow:0 0 20px rgba(78,205,196,0.4),0 0 40px rgba(78,205,196,0.15);
+}
+#center-label .sub{
+  font-size:9px;color:var(--text-dim);margin-top:4px;
+  letter-spacing:1.5px;
+  animation:labelFade 4s ease-in-out infinite;
+}
+@keyframes labelPulse{
+  0%,100%{opacity:.7;text-shadow:0 0 20px rgba(78,205,196,0.4),0 0 40px rgba(78,205,196,0.15)}
+  50%{opacity:1;text-shadow:0 0 30px rgba(78,205,196,0.6),0 0 60px rgba(78,205,196,0.3)}
+}
+@keyframes labelFade{
+  0%,100%{opacity:.4}
+  50%{opacity:.7}
+}
+/* Fallback when Three.js unavailable */
+#fallback{
+  display:none;width:100%;height:100%;
+  background:radial-gradient(ellipse at center,var(--bg-card) 0%,var(--bg-primary) 70%);
+}
+#fallback .ring{
+  position:absolute;border:1px solid var(--accent-cyan);border-radius:50%;
+  opacity:.15;top:50%;left:50%;transform:translate(-50%,-50%);
+}
+@keyframes spin{from{transform:translate(-50%,-50%) rotate(0deg)}to{transform:translate(-50%,-50%) rotate(360deg)}}
+
+/* ── Footer (Runtime Loop) ─────────────────────────────────────── */
+footer{
+  grid-area:footer;display:flex;align-items:center;
+  justify-content:center;gap:6px;
+  background:var(--bg-secondary);border-top:1px solid var(--border);
+  font-size:10px;color:var(--text-dim);letter-spacing:.5px;
+}
+.step{
+  padding:4px 10px;border-radius:4px;transition:all .4s ease;
+  text-transform:uppercase;font-weight:500;
+}
+.step.active{color:var(--accent-cyan);background:var(--accent-cyan-dim)}
+.step-arrow{color:var(--text-dim);opacity:.4}
+
+/* ── Welcome Overlay ───────────────────────────────────────────── */
+#welcome{
+  position:fixed;inset:0;z-index:100;
+  display:flex;align-items:center;justify-content:center;
+  background:rgba(10,14,26,0.92);
+  backdrop-filter:blur(12px);
+  transition:opacity .5s ease;
+}
+#welcome.hidden{opacity:0;pointer-events:none}
+.welcome-box{
+  max-width:480px;text-align:center;padding:48px 40px;
+  background:var(--bg-card);border:1px solid var(--border);
+  border-radius:16px;box-shadow:var(--shadow);
+}
+.welcome-box h2{
+  font-size:20px;font-weight:600;color:var(--text-primary);
+  margin-bottom:8px;
+}
+.welcome-box h2 b{color:var(--accent-cyan)}
+.welcome-box p{
+  font-size:13px;color:var(--text-secondary);line-height:1.6;
+  margin-bottom:24px;
+}
+.welcome-box .start-btn{
+  display:inline-flex;align-items:center;gap:8px;
+  padding:12px 32px;border:none;border-radius:8px;
+  background:var(--accent-cyan);color:#0a0e1a;
+  font-size:14px;font-weight:600;font-family:var(--font);
+  cursor:pointer;transition:var(--transition);
+}
+.welcome-box .start-btn:hover{filter:brightness(1.1)}
+
+/* ── Toggle Switch ─────────────────────────────────────────────── */
+.toggle-row{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:5px 0;font-size:11px;color:var(--text-secondary);
+}
+.toggle-row+.toggle-row{border-top:1px solid var(--border)}
+.toggle{
+  position:relative;width:34px;height:18px;flex-shrink:0;
+  background:var(--border);border-radius:9px;cursor:pointer;
+  transition:var(--transition);
+}
+.toggle.on{background:var(--accent-cyan)}
+.toggle::after{
+  content:'';position:absolute;top:2px;left:2px;
+  width:14px;height:14px;border-radius:50%;
+  background:var(--text-primary);transition:var(--transition);
+}
+.toggle.on::after{left:18px}
+.select-row{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:5px 0;font-size:11px;color:var(--text-secondary);
+}
+.select-row select{
+  background:var(--bg-primary);color:var(--text-primary);
+  border:1px solid var(--border);border-radius:4px;
+  padding:2px 6px;font-size:11px;font-family:var(--font);
+  cursor:pointer;
+}
+.select-row select:focus{outline:none;border-color:var(--accent-cyan)}
+
+/* ── Toast Notification ────────────────────────────────────────── */
+#toast{
+  position:fixed;top:60px;right:20px;z-index:200;
+  min-width:280px;max-width:380px;
+  background:var(--bg-card);border:1px solid var(--border);
+  border-radius:12px;box-shadow:var(--shadow);
+  padding:14px 18px;
+  transform:translateX(420px);opacity:0;
+  transition:transform .4s cubic-bezier(.16,1,.3,1),opacity .3s ease;
+  pointer-events:none;
+}
+#toast.show{transform:translateX(0);opacity:1;pointer-events:auto}
+#toast .toast-title{
+  font-size:13px;font-weight:600;color:var(--text-primary);
+  margin-bottom:4px;display:flex;align-items:center;gap:6px;
+}
+#toast .toast-msg{font-size:11px;color:var(--text-secondary);line-height:1.4}
+#toast .toast-bar{
+  height:3px;margin-top:10px;border-radius:2px;
+  background:var(--accent-cyan);transition:width 3s linear;
+}
+#toast.success .toast-title{color:var(--accent-green)}
+#toast.success .toast-bar{background:var(--accent-green)}
+#toast.error .toast-title{color:var(--accent-red)}
+#toast.error .toast-bar{background:var(--accent-red)}
+
+/* ── Version footer ───────────────────────────────────────────── */
+.version-text{font-size:9px;color:var(--text-dim);text-align:center;padding:4px 0}
+
+/* ── Sidebar Sections ──────────────────────────────────────────── */
+.section-label{
+  font-size:9px;font-weight:600;letter-spacing:1.5px;
+  text-transform:uppercase;color:var(--text-dim);
+  padding:6px 4px 2px;margin-top:4px;
+  border-top:1px solid var(--border);
+  opacity:.6;
+}
+.section-label:first-child{border-top:none;margin-top:0}
+
+/* ── Scrollbar ──────────────────────────────────────────────────── */
+::-webkit-scrollbar{width:6px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:var(--text-dim)}
+</style>
+</head>
+<body>
+
+<!-- ── Welcome Screen ──────────────────────────────────────────── -->
+<div id="welcome">
+  <div class="welcome-box">
+    <h2><b>RuVector</b> Control Center</h2>
+    <p>
+      A living view of your system's memory, neural engine, and
+      optimization state. The world model at center visualises vectors,
+      graph structures, attention flow, and coherence in real time.
+    </p>
+    <button class="start-btn" onclick="dismissWelcome()">Get Started</button>
+  </div>
+</div>
+
+<!-- ── Toast Notification ──────────────────────────────────────── -->
+<div id="toast">
+  <div class="toast-title" id="toastTitle"></div>
+  <div class="toast-msg" id="toastMsg"></div>
+  <div class="toast-bar" id="toastBar" style="width:100%"></div>
+</div>
+
+<!-- ── Main Application ────────────────────────────────────────── -->
+<div id="app">
+
+  <!-- Header -->
+  <header>
+    <h1><b>RuVector</b> &nbsp;Control Center</h1>
+    <div class="hdr-right">
+      <span id="hdrVersion" style="font-size:10px;color:var(--text-dim)"></span>
+      <button class="theme-btn" id="themeBtn" onclick="toggleTheme()">Light</button>
+    </div>
+  </header>
+
+  <!-- Sidebar -->
+  <aside id="sidebar">
+
+    <div class="section-label">System Status</div>
+
+    <!-- Memory Gauge -->
+    <div class="card">
+      <div class="card-title">Memory</div>
+      <div class="gauge-row">
+        <div class="gauge-ring">
+          <svg viewBox="0 0 80 80" width="72" height="72">
+            <circle class="g-track" cx="40" cy="40" r="34"/>
+            <circle class="g-fill" id="gaugeFill" cx="40" cy="40" r="34"
+              stroke-dasharray="213.6" stroke-dashoffset="213.6"/>
+          </svg>
+          <div class="gauge-lbl">
+            <span class="gauge-val" id="gaugeVal">--</span>
+            <span class="gauge-pct">%</span>
+          </div>
+        </div>
+        <div class="gauge-stats">
+          <div class="st">Used: <strong id="usedMb">--</strong> GB</div>
+          <div class="st">Total: <strong id="totalMb">--</strong> GB</div>
+          <div class="st">Free: <strong id="freeMb">--</strong> GB</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CPU Info -->
+    <div class="card">
+      <div class="card-title">Processor</div>
+      <div class="cpu-model" id="cpuModel">--</div>
+      <div class="chips" id="cpuChips"></div>
+    </div>
+
+    <div class="section-label">Actions</div>
+
+    <!-- Actions -->
+    <div class="card">
+      <div class="card-title">Quick Actions</div>
+      <div class="actions">
+        <button class="btn" id="btnOptimize" onclick="doOptimize(false)">
+          <span class="ico">&#9889;</span> Optimize Now
+        </button>
+        <button class="btn" id="btnDeep" onclick="doOptimize(true)">
+          <span class="ico">&#128295;</span> Deep Clean
+        </button>
+        <button class="btn" id="btnApps" onclick="doOptimizeApps()">
+          <span class="ico">&#127760;</span> Optimize Apps
+        </button>
+        <button class="btn" onclick="requestProcesses()">
+          <span class="ico">&#128202;</span> Refresh Processes
+        </button>
+      </div>
+    </div>
+
+    <div class="section-label">Configuration</div>
+
+    <!-- Settings -->
+    <div class="card">
+      <div class="card-title">Settings</div>
+      <div class="toggle-row">
+        <span>Auto-Optimize</span>
+        <div class="toggle" id="togAutoOpt" onclick="toggleSetting('auto_optimize')"></div>
+      </div>
+      <div class="select-row" style="padding:5px 0;border-top:1px solid var(--border)">
+        <span style="font-size:11px;color:var(--text-secondary)">Threshold</span>
+        <select id="selThreshold" onchange="setSetting('threshold',parseInt(this.value))">
+          <option value="75">75%</option>
+          <option value="80">80%</option>
+          <option value="85">85%</option>
+          <option value="90">90%</option>
+        </select>
+      </div>
+      <div class="select-row" style="padding:5px 0;border-top:1px solid var(--border)">
+        <span style="font-size:11px;color:var(--text-secondary)">Interval</span>
+        <select id="selInterval" onchange="setSetting('interval_secs',parseInt(this.value))">
+          <option value="30">30s</option>
+          <option value="60">60s</option>
+          <option value="120">2 min</option>
+          <option value="300">5 min</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- AI Mode -->
+    <div class="card">
+      <div class="card-title">AI Mode</div>
+      <div class="toggle-row">
+        <span>Game Mode</span>
+        <div class="toggle" id="togGameMode" onclick="toggleSetting('ai_game_mode')"></div>
+      </div>
+      <div class="toggle-row">
+        <span>Focus Mode</span>
+        <div class="toggle" id="togFocusMode" onclick="toggleSetting('ai_focus_mode')"></div>
+      </div>
+      <div class="toggle-row">
+        <span>Thermal Prediction</span>
+        <div class="toggle" id="togThermal" onclick="toggleSetting('ai_thermal')"></div>
+      </div>
+      <div class="toggle-row">
+        <span>Predictive Preload</span>
+        <div class="toggle" id="togPreload" onclick="toggleSetting('ai_preload')"></div>
+      </div>
+    </div>
+
+    <div class="section-label">Monitoring</div>
+
+    <!-- Top Processes -->
+    <div class="card">
+      <div class="card-title">Top Processes</div>
+      <div class="proc-list" id="procList">
+        <div style="font-size:11px;color:var(--text-dim)">Loading...</div>
+      </div>
+    </div>
+
+  </aside>
+
+  <!-- Main: Three.js World Model -->
+  <section id="main">
+    <canvas id="world-canvas"></canvas>
+    <div id="center-label">
+      <div class="title" id="centerTitle">RuVector OS Optimizer</div>
+      <div class="sub" id="centerSub">memory &middot; neural &middot; optimize &middot; protect</div>
+    </div>
+    <div id="fallback">
+      <div class="ring" style="width:120px;height:120px;animation:spin 20s linear infinite"></div>
+      <div class="ring" style="width:220px;height:220px;animation:spin 30s linear infinite reverse"></div>
+      <div class="ring" style="width:340px;height:340px;animation:spin 45s linear infinite"></div>
+    </div>
+  </section>
+
+  <!-- Footer: Runtime Loop -->
+  <footer>
+    <span class="step" data-idx="0">Ingest</span>
+    <span class="step-arrow">&rarr;</span>
+    <span class="step" data-idx="1">Embed</span>
+    <span class="step-arrow">&rarr;</span>
+    <span class="step" data-idx="2">Link</span>
+    <span class="step-arrow">&rarr;</span>
+    <span class="step" data-idx="3">Measure</span>
+    <span class="step-arrow">&rarr;</span>
+    <span class="step" data-idx="4">Gate</span>
+    <span class="step-arrow">&rarr;</span>
+    <span class="step" data-idx="5">Act</span>
+    <span class="step-arrow">&rarr;</span>
+    <span class="step" data-idx="6">Settle</span>
+  </footer>
+
+</div>
+
+<!-- ── Three.js (CDN) ──────────────────────────────────────────── -->
+<script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+
+<script>
+/* ================================================================
+   RuVector Control Center – Client Logic
+   ================================================================ */
+
+// ── Initial Config ─────────────────────────────────────────────
+const INITIAL_THEME = '{{THEME}}';
+const WELCOME_SHOWN = {{WELCOME_SHOWN}};
+
+// ── Welcome Screen ─────────────────────────────────────────────
+(function(){
+  const el = document.getElementById('welcome');
+  if(WELCOME_SHOWN){ el.classList.add('hidden'); }
+})();
+
+function dismissWelcome(){
+  document.getElementById('welcome').classList.add('hidden');
+  if(window.ipc) window.ipc.postMessage(JSON.stringify({type:'welcome_done'}));
+}
+
+// ── Theme ──────────────────────────────────────────────────────
+let currentTheme = INITIAL_THEME;
+updateThemeButton();
+
+function toggleTheme(){
+  currentTheme = currentTheme === 'dark' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', currentTheme);
+  updateThemeButton();
+  if(window.ipc) window.ipc.postMessage(JSON.stringify({type:'set_theme',theme:currentTheme}));
+  // Update Three.js scene colours
+  if(typeof updateSceneTheme === 'function') updateSceneTheme(currentTheme);
+}
+function updateThemeButton(){
+  const btn = document.getElementById('themeBtn');
+  btn.textContent = currentTheme === 'dark' ? 'Light' : 'Dark';
+}
+
+// ── IPC Helpers ────────────────────────────────────────────────
+function requestMetrics(){
+  if(window.ipc) window.ipc.postMessage(JSON.stringify({type:'get_metrics'}));
+}
+function requestProcesses(){
+  if(window.ipc) window.ipc.postMessage(JSON.stringify({type:'get_processes'}));
+}
+function doOptimize(aggressive){
+  const btn = document.getElementById(aggressive ? 'btnDeep' : 'btnOptimize');
+  btn.disabled = true;
+  btn.textContent = 'Working...';
+  if(window.sceneEffect) window.sceneEffect('working');
+  if(window.ipc) window.ipc.postMessage(JSON.stringify({type:'optimize',aggressive:aggressive}));
+}
+
+// ── Callbacks (invoked from Rust) ──────────────────────────────
+window.updateMetrics = function(d){
+  // Memory gauge
+  const load = d.memory_load || 0;
+  const circ = 213.6;
+  const offset = circ - (circ * load / 100);
+  const fill = document.getElementById('gaugeFill');
+  fill.style.strokeDashoffset = offset;
+  // colour by load
+  if(load > 85) fill.style.stroke = 'var(--accent-red)';
+  else if(load > 70) fill.style.stroke = 'var(--accent-amber)';
+  else fill.style.stroke = 'var(--accent-cyan)';
+
+  document.getElementById('gaugeVal').textContent = Math.round(load);
+  document.getElementById('usedMb').textContent = ((d.used_mb||0)/1024).toFixed(1);
+  document.getElementById('totalMb').textContent = ((d.total_mb||0)/1024).toFixed(1);
+  document.getElementById('freeMb').textContent = ((d.available_mb||0)/1024).toFixed(1);
+
+  // CPU
+  document.getElementById('cpuModel').textContent = d.cpu_model || '--';
+  const chips = document.getElementById('cpuChips');
+  chips.innerHTML = '';
+  var features = [];
+  if(d.avx2 !== undefined) features.push(['AVX2', d.avx2]);
+  if(d.avx512 !== undefined) features.push(['AVX-512', d.avx512]);
+  if(d.cpu_cores) features.push([d.cpu_cores+' Cores', true]);
+  if(d.simd_speedup && d.simd_speedup > 1) features.push([d.simd_speedup.toFixed(1)+'x SIMD', true]);
+  features.forEach(function(f){
+    var s = document.createElement('span');
+    s.className = 'chip ' + (f[1] ? 'on' : 'off');
+    s.textContent = f[0];
+    chips.appendChild(s);
+  });
+};
+
+window.updateProcesses = function(list){
+  const el = document.getElementById('procList');
+  if(!list || !list.length){ el.innerHTML = '<div style="font-size:11px;color:var(--text-dim)">No data</div>'; return; }
+  el.innerHTML = '';
+  list.slice(0, 15).forEach(function(p){
+    const row = document.createElement('div');
+    row.className = 'proc-row';
+    row.innerHTML = '<span class="proc-name">'+escHtml(p.name)+'</span>'
+      +'<span class="proc-mem">'+p.memory_mb.toFixed(0)+' MB</span>';
+    el.appendChild(row);
+  });
+};
+
+window.optimizeResult = function(r){
+  // Re-enable buttons
+  document.getElementById('btnOptimize').disabled = false;
+  document.getElementById('btnOptimize').innerHTML = '<span class="ico">&#9889;</span> Optimize Now';
+  document.getElementById('btnDeep').disabled = false;
+  document.getElementById('btnDeep').innerHTML = '<span class="ico">&#128295;</span> Deep Clean';
+  // Trigger scene effect + toast notification
+  if(r && r.success){
+    if(window.sceneEffect) window.sceneEffect('success');
+    showToast('Optimization Complete',
+      'Freed ' + (r.freed_mb||0).toFixed(0) + ' MB from '
+      + (r.processes||0) + ' processes in '
+      + (r.duration_ms||0) + 'ms', 'success');
+  } else {
+    if(window.sceneEffect) window.sceneEffect('error');
+    showToast('Optimization Failed', r && r.error ? r.error : 'Unknown error', 'error');
+  }
+  // Refresh metrics after optimization
+  requestMetrics();
+  requestProcesses();
+};
+
+window.optimizeAppsResult = function(r){
+  document.getElementById('btnApps').disabled = false;
+  document.getElementById('btnApps').innerHTML = '<span class="ico">&#127760;</span> Optimize Apps';
+  if(r && r.success){
+    if(window.sceneEffect) window.sceneEffect('success');
+    showToast('App Optimization Complete',
+      'Freed ' + (r.freed_mb||0).toFixed(0) + ' MB from '
+      + (r.processes||0) + ' apps in '
+      + (r.duration_ms||0) + 'ms', 'success');
+  } else {
+    if(window.sceneEffect) window.sceneEffect('error');
+    showToast('App Optimization Failed', r && r.error ? r.error : 'Unknown error', 'error');
+  }
+  requestMetrics();
+  requestProcesses();
+};
+
+window.updateSettings = function(s){
+  if(!s) return;
+  // Toggles
+  setToggle('togAutoOpt', s.auto_optimize);
+  setToggle('togGameMode', s.ai_game_mode);
+  setToggle('togFocusMode', s.ai_focus_mode);
+  setToggle('togThermal', s.ai_thermal);
+  setToggle('togPreload', s.ai_preload);
+  // Selects
+  var sel = document.getElementById('selThreshold');
+  if(sel) sel.value = String(s.threshold || 75);
+  var intSel = document.getElementById('selInterval');
+  if(intSel) intSel.value = String(s.interval_secs || 60);
+  // Version
+  if(s.version){
+    document.getElementById('hdrVersion').textContent = 'v' + s.version;
+  }
+};
+
+function setToggle(id, val){
+  var el = document.getElementById(id);
+  if(!el) return;
+  if(val) el.classList.add('on');
+  else el.classList.remove('on');
+}
+
+// ── Toast Notification ──────────────────────────────────────────
+var toastTimer = null;
+function showToast(title, msg, type){
+  var el = document.getElementById('toast');
+  var titleEl = document.getElementById('toastTitle');
+  var msgEl = document.getElementById('toastMsg');
+  var bar = document.getElementById('toastBar');
+  // Set content
+  titleEl.textContent = (type === 'success' ? '\u2714 ' : type === 'error' ? '\u2718 ' : '') + title;
+  msgEl.textContent = msg;
+  // Reset classes
+  el.className = type ? type : '';
+  bar.style.transition = 'none';
+  bar.style.width = '100%';
+  // Show
+  void el.offsetWidth; // force reflow
+  el.classList.add('show');
+  bar.style.transition = 'width 3s linear';
+  bar.style.width = '0%';
+  // Auto-hide after 3.5s
+  if(toastTimer) clearTimeout(toastTimer);
+  toastTimer = setTimeout(function(){
+    el.classList.remove('show');
+  }, 3500);
+}
+
+// ── Settings IPC ────────────────────────────────────────────────
+function toggleSetting(key){
+  var el = null;
+  if(key === 'auto_optimize') el = document.getElementById('togAutoOpt');
+  else if(key === 'ai_game_mode') el = document.getElementById('togGameMode');
+  else if(key === 'ai_focus_mode') el = document.getElementById('togFocusMode');
+  else if(key === 'ai_thermal') el = document.getElementById('togThermal');
+  else if(key === 'ai_preload') el = document.getElementById('togPreload');
+  if(!el) return;
+  el.classList.toggle('on');
+  var val = el.classList.contains('on');
+  if(window.ipc) window.ipc.postMessage(JSON.stringify({type:'set_setting',key:key,value:val}));
+}
+
+function setSetting(key, value){
+  if(window.ipc) window.ipc.postMessage(JSON.stringify({type:'set_setting',key:key,value:value}));
+}
+
+function doOptimizeApps(){
+  var btn = document.getElementById('btnApps');
+  btn.disabled = true;
+  btn.textContent = 'Working...';
+  if(window.sceneEffect) window.sceneEffect('working');
+  if(window.ipc) window.ipc.postMessage(JSON.stringify({type:'optimize_apps'}));
+}
+
+function requestSettings(){
+  if(window.ipc) window.ipc.postMessage(JSON.stringify({type:'get_settings'}));
+}
+
+function escHtml(s){
+  var d=document.createElement('div');d.textContent=s;return d.innerHTML;
+}
+
+// ── Periodic Refresh ───────────────────────────────────────────
+setInterval(requestMetrics, 5000);
+setInterval(requestProcesses, 10000);
+// Initial fetch
+setTimeout(function(){ requestMetrics(); requestProcesses(); requestSettings(); }, 500);
+
+// ── Runtime Loop Animation ─────────────────────────────────────
+(function(){
+  const steps = document.querySelectorAll('.step');
+  let idx = 0;
+  setInterval(function(){
+    steps.forEach(function(s){ s.classList.remove('active'); });
+    steps[idx].classList.add('active');
+    idx = (idx + 1) % steps.length;
+  }, 1200);
+})();
+
+// ── Center Label Subtitle Cycling ─────────────────────────────
+(function(){
+  var subs = [
+    'memory \u00b7 neural \u00b7 optimize \u00b7 protect',
+    'scanning \u00b7 learning \u00b7 adapting',
+    'vectors \u00b7 graphs \u00b7 attention \u00b7 coherence',
+    'real-time \u00b7 intelligent \u00b7 autonomous'
+  ];
+  var si = 0;
+  var el = document.getElementById('centerSub');
+  if(!el) return;
+  setInterval(function(){
+    el.style.opacity = '0';
+    setTimeout(function(){
+      si = (si + 1) % subs.length;
+      el.textContent = subs[si];
+      el.style.opacity = '';
+    }, 400);
+  }, 5000);
+})();
+
+// ── Three.js World Model ───────────────────────────────────────
+(function(){
+  if(typeof THREE === 'undefined'){
+    // Fallback: show CSS rings
+    document.getElementById('world-canvas').style.display = 'none';
+    document.getElementById('fallback').style.display = 'block';
+    return;
+  }
+
+  const canvas = document.getElementById('world-canvas');
+  const container = document.getElementById('main');
+  const W = container.clientWidth;
+  const H = container.clientHeight;
+
+  // Scene
+  const scene = new THREE.Scene();
+  scene.fog = new THREE.FogExp2(0x0a0e1a, 0.012);
+
+  const camera = new THREE.PerspectiveCamera(55, W/H, 0.1, 500);
+  camera.position.set(0, 1.5, 7);
+  camera.lookAt(0, 0, 0);
+
+  const renderer = new THREE.WebGLRenderer({canvas:canvas, antialias:true, alpha:true});
+  renderer.setSize(W, H);
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.setClearColor(0x000000, 0);
+
+  // ── World Model: wireframe icosahedron ───────
+  const coreGeo = new THREE.IcosahedronGeometry(1.2, 1);
+  const coreMat = new THREE.MeshBasicMaterial({
+    color: 0x4ecdc4, wireframe: true, transparent: true, opacity: 0.5
+  });
+  const core = new THREE.Mesh(coreGeo, coreMat);
+  scene.add(core);
+
+  // Inner glow sphere
+  const glowGeo = new THREE.SphereGeometry(0.9, 24, 24);
+  const glowMat = new THREE.MeshBasicMaterial({
+    color: 0x4ecdc4, transparent: true, opacity: 0.06
+  });
+  const glow = new THREE.Mesh(glowGeo, glowMat);
+  scene.add(glow);
+
+  // ── Vector Layer: particles ──────────────────
+  const PARTICLE_COUNT = 300;
+  const pGeo = new THREE.BufferGeometry();
+  const pPos = new Float32Array(PARTICLE_COUNT * 3);
+  const pVel = new Float32Array(PARTICLE_COUNT * 3); // drift velocities
+  for(let i=0; i<PARTICLE_COUNT; i++){
+    const r = 1.8 + Math.random() * 3.0;
+    const theta = Math.random() * Math.PI * 2;
+    const phi = Math.acos(Math.random() * 2 - 1);
+    pPos[i*3]   = r * Math.sin(phi) * Math.cos(theta);
+    pPos[i*3+1] = r * Math.sin(phi) * Math.sin(theta);
+    pPos[i*3+2] = r * Math.cos(phi);
+    pVel[i*3]   = (Math.random()-0.5)*0.002;
+    pVel[i*3+1] = (Math.random()-0.5)*0.002;
+    pVel[i*3+2] = (Math.random()-0.5)*0.002;
+  }
+  pGeo.setAttribute('position', new THREE.BufferAttribute(pPos, 3));
+  const pMat = new THREE.PointsMaterial({
+    color: 0x4ecdc4, size: 0.04, transparent: true, opacity: 0.45,
+    sizeAttenuation: true
+  });
+  const particles = new THREE.Points(pGeo, pMat);
+  scene.add(particles);
+
+  // ── Graph Layer: edge lines ──────────────────
+  const edgeVerts = [];
+  for(let i=0; i<80; i++){
+    const a = Math.floor(Math.random()*PARTICLE_COUNT)*3;
+    const b = Math.floor(Math.random()*PARTICLE_COUNT)*3;
+    edgeVerts.push(pPos[a],pPos[a+1],pPos[a+2], pPos[b],pPos[b+1],pPos[b+2]);
+  }
+  const edgeGeo = new THREE.BufferGeometry();
+  edgeGeo.setAttribute('position', new THREE.Float32BufferAttribute(edgeVerts, 3));
+  const edgeMat = new THREE.LineBasicMaterial({
+    color: 0x4ecdc4, transparent: true, opacity: 0.07
+  });
+  const edges = new THREE.LineSegments(edgeGeo, edgeMat);
+  scene.add(edges);
+
+  // ── Attention Layer: curved flow lines ───────
+  const flowGroup = new THREE.Group();
+  for(let i=0; i<12; i++){
+    const curve = new THREE.QuadraticBezierCurve3(
+      new THREE.Vector3((Math.random()-0.5)*4, (Math.random()-0.5)*3, (Math.random()-0.5)*3),
+      new THREE.Vector3((Math.random()-0.5)*2, (Math.random()-0.5)*2, (Math.random()-0.5)*2),
+      new THREE.Vector3((Math.random()-0.5)*4, (Math.random()-0.5)*3, (Math.random()-0.5)*3)
+    );
+    const pts = curve.getPoints(20);
+    const fGeo = new THREE.BufferGeometry().setFromPoints(pts);
+    const fMat = new THREE.LineBasicMaterial({
+      color: 0xd4a574, transparent: true, opacity: 0.12
+    });
+    flowGroup.add(new THREE.Line(fGeo, fMat));
+  }
+  scene.add(flowGroup);
+
+  // ── Coherence Layer: torus ring ──────────────
+  const torusGeo = new THREE.TorusGeometry(3.2, 0.015, 16, 100);
+  const torusMat = new THREE.MeshBasicMaterial({
+    color: 0xd4a574, transparent: true, opacity: 0.2
+  });
+  const torus = new THREE.Mesh(torusGeo, torusMat);
+  torus.rotation.x = Math.PI * 0.45;
+  scene.add(torus);
+
+  // Second thinner ring
+  const torus2Geo = new THREE.TorusGeometry(2.5, 0.01, 16, 80);
+  const torus2Mat = new THREE.MeshBasicMaterial({
+    color: 0x4ecdc4, transparent: true, opacity: 0.1
+  });
+  const torus2 = new THREE.Mesh(torus2Geo, torus2Mat);
+  torus2.rotation.x = Math.PI * 0.6;
+  torus2.rotation.y = Math.PI * 0.3;
+  scene.add(torus2);
+
+  // ── Shockwave Ring (created once, hidden until triggered) ──
+  const shockGeo = new THREE.RingGeometry(0.1, 0.25, 64);
+  const shockMat = new THREE.MeshBasicMaterial({
+    color: 0x6bcb77, transparent: true, opacity: 0, side: THREE.DoubleSide
+  });
+  const shockRing = new THREE.Mesh(shockGeo, shockMat);
+  scene.add(shockRing);
+
+  // ── Effect State ──────────────────────────────
+  var fx = {
+    mode: 'idle',       // idle | working | success | error
+    t0: 0,              // time effect started
+    intensity: 0,       // 0..1 ramp
+    shockScale: 0,      // shockwave expansion
+    shockOpacity: 0,
+    coreScaleTarget: 1,
+    coreScale: 1,
+    speedMult: 1,       // rotation speed multiplier
+    particlePull: 0,    // inward pull strength
+    flashColor: null,
+    flashFade: 0
+  };
+
+  // Store base particle positions for pull effect
+  var pBase = new Float32Array(PARTICLE_COUNT * 3);
+  for(var i=0;i<pBase.length;i++) pBase[i] = pPos[i];
+
+  // ── Animation Loop ───────────────────────────
+  const clock = new THREE.Clock();
+  function animate(){
+    requestAnimationFrame(animate);
+    const t = clock.getElapsedTime();
+    var dt = Math.min(clock.getDelta(), 0.05);
+
+    // ── Effect transitions ──────────────────────
+    if(fx.mode === 'working'){
+      fx.intensity = Math.min(fx.intensity + dt * 0.8, 1);
+      fx.speedMult = 1 + fx.intensity * 4;
+      fx.coreScaleTarget = 1 + fx.intensity * 0.3;
+      fx.particlePull = fx.intensity * 0.015;
+      glowMat.opacity = 0.06 + fx.intensity * 0.18;
+      coreMat.opacity = 0.5 + fx.intensity * 0.4;
+      pMat.opacity = 0.45 + fx.intensity * 0.35;
+      pMat.size = 0.04 + fx.intensity * 0.04;
+      edgeMat.opacity = 0.07 + fx.intensity * 0.15;
+      torusMat.opacity = 0.2 + fx.intensity * 0.4;
+      torus2Mat.opacity = 0.1 + fx.intensity * 0.3;
+      flowGroup.children.forEach(function(l){ l.material.opacity = 0.12 + fx.intensity * 0.25; });
+    }
+    else if(fx.mode === 'success'){
+      var age = t - fx.t0;
+      // Burst phase (0-0.6s): expand particles outward, shockwave
+      if(age < 0.6){
+        fx.particlePull = -0.04 * (1 - age/0.6);
+        fx.shockScale = age / 0.6 * 18;
+        fx.shockOpacity = 0.6 * (1 - age/0.6);
+        fx.coreScaleTarget = 1.5 - age/0.6 * 0.3;
+        fx.speedMult = 5 - age/0.6 * 3;
+      }
+      // Settle phase (0.6-2.5s): ease back to idle
+      else if(age < 2.5){
+        var p = (age - 0.6) / 1.9;
+        fx.particlePull = 0;
+        fx.shockScale = 18;
+        fx.shockOpacity = 0;
+        fx.coreScaleTarget = 1.2 - p * 0.2;
+        fx.speedMult = 2 - p;
+        glowMat.opacity = 0.24 - p * 0.18;
+        coreMat.opacity = 0.9 - p * 0.4;
+        pMat.opacity = 0.8 - p * 0.35;
+        pMat.size = 0.08 - p * 0.04;
+        edgeMat.opacity = 0.22 - p * 0.15;
+        torusMat.opacity = 0.6 - p * 0.4;
+        torus2Mat.opacity = 0.4 - p * 0.3;
+        flowGroup.children.forEach(function(l){ l.material.opacity = 0.37 - p * 0.25; });
+      } else {
+        fx.mode = 'idle';
+        resetFx();
+      }
+      // Flash green fade
+      if(fx.flashFade > 0){
+        fx.flashFade = Math.max(0, fx.flashFade - dt * 1.2);
+        coreMat.color.lerpColors(new THREE.Color(0x4ecdc4), new THREE.Color(0x6bcb77), fx.flashFade);
+        glowMat.color.lerpColors(new THREE.Color(0x4ecdc4), new THREE.Color(0x6bcb77), fx.flashFade);
+        pMat.color.lerpColors(new THREE.Color(0x4ecdc4), new THREE.Color(0x6bcb77), fx.flashFade);
+      }
+    }
+    else if(fx.mode === 'error'){
+      var age = t - fx.t0;
+      if(age < 1.5){
+        // Shake camera
+        camera.position.x = Math.sin(age * 40) * 0.08 * (1 - age/1.5);
+        camera.position.y = 1.5 + Math.cos(age * 35) * 0.06 * (1 - age/1.5);
+        // Flash red fade
+        var rf = Math.max(0, 1 - age/1.0);
+        coreMat.color.lerpColors(new THREE.Color(0x4ecdc4), new THREE.Color(0xe06060), rf);
+        glowMat.color.lerpColors(new THREE.Color(0x4ecdc4), new THREE.Color(0xe06060), rf);
+        fx.speedMult = 2 - age/1.5;
+        glowMat.opacity = 0.24 - (age/1.5) * 0.18;
+        coreMat.opacity = 0.9 - (age/1.5) * 0.4;
+      } else {
+        camera.position.set(0, 1.5, 7);
+        fx.mode = 'idle';
+        resetFx();
+      }
+    }
+    else {
+      // idle: gently ease everything back
+      fx.speedMult += (1 - fx.speedMult) * dt * 2;
+      fx.coreScaleTarget = 1;
+      fx.particlePull = 0;
+    }
+
+    // Smooth core scale
+    fx.coreScale += (fx.coreScaleTarget - fx.coreScale) * dt * 4;
+    core.scale.setScalar(fx.coreScale);
+    glow.scale.setScalar(fx.coreScale * 0.75);
+
+    // Shockwave ring
+    shockRing.scale.setScalar(fx.shockScale);
+    shockMat.opacity = fx.shockOpacity;
+
+    // ── Core rotation (speed-modulated) ─────────
+    core.rotation.y = t * 0.15 * fx.speedMult;
+    core.rotation.x = Math.sin(t * 0.08 * fx.speedMult) * 0.2;
+    glow.rotation.y = -t * 0.1 * fx.speedMult;
+
+    // ── Particles (drift + pull effect) ─────────
+    const pos = pGeo.attributes.position.array;
+    for(let i=0; i<PARTICLE_COUNT; i++){
+      var ix=i*3, iy=i*3+1, iz=i*3+2;
+      // Normal drift
+      pos[ix]  += pVel[ix];
+      pos[iy]  += pVel[iy];
+      pos[iz]  += pVel[iz];
+      // Pull toward/away from center
+      if(fx.particlePull !== 0){
+        var dx=pos[ix], dy=pos[iy], dz=pos[iz];
+        var d = Math.sqrt(dx*dx+dy*dy+dz*dz) || 1;
+        pos[ix] -= (dx/d) * fx.particlePull;
+        pos[iy] -= (dy/d) * fx.particlePull;
+        pos[iz] -= (dz/d) * fx.particlePull;
+      }
+      // Boundary bounce
+      var dx2=pos[ix],dy2=pos[iy],dz2=pos[iz];
+      var dist = Math.sqrt(dx2*dx2+dy2*dy2+dz2*dz2);
+      if(dist > 6 || dist < 0.5){
+        pVel[ix] *= -0.8;
+        pVel[iy] *= -0.8;
+        pVel[iz] *= -0.8;
+      }
+    }
+    pGeo.attributes.position.needsUpdate = true;
+
+    // ── Torus rings (speed-modulated) ───────────
+    torus.rotation.z = t * 0.04 * fx.speedMult;
+    torus2.rotation.z = -t * 0.03 * fx.speedMult;
+
+    // Flow group oscillation
+    flowGroup.rotation.y = Math.sin(t * 0.1 * fx.speedMult) * 0.3;
+    flowGroup.rotation.x = Math.cos(t * 0.07 * fx.speedMult) * 0.15;
+
+    // Edge layer rotation
+    edges.rotation.y = t * 0.02 * fx.speedMult;
+
+    renderer.render(scene, camera);
+  }
+  animate();
+
+  function resetFx(){
+    fx.intensity = 0;
+    fx.speedMult = 1;
+    fx.coreScaleTarget = 1;
+    fx.particlePull = 0;
+    fx.shockScale = 0;
+    fx.shockOpacity = 0;
+    fx.flashFade = 0;
+    glowMat.opacity = 0.06;
+    coreMat.opacity = 0.5;
+    pMat.opacity = 0.45;
+    pMat.size = 0.04;
+    edgeMat.opacity = 0.07;
+    torusMat.opacity = 0.2;
+    torus2Mat.opacity = 0.1;
+    flowGroup.children.forEach(function(l){ l.material.opacity = 0.12; });
+    coreMat.color.set(0x4ecdc4);
+    glowMat.color.set(0x4ecdc4);
+    pMat.color.set(0x4ecdc4);
+    camera.position.set(0, 1.5, 7);
+  }
+
+  // ── Public Effect Trigger ─────────────────────
+  window.sceneEffect = function(type){
+    var now = clock.getElapsedTime();
+    if(type === 'working'){
+      fx.mode = 'working';
+      fx.t0 = now;
+      fx.intensity = 0;
+    } else if(type === 'success'){
+      fx.mode = 'success';
+      fx.t0 = now;
+      fx.flashFade = 1;
+      shockMat.color.set(0x6bcb77);
+      // Boost particle velocities outward for burst
+      var pos = pGeo.attributes.position.array;
+      for(var i=0;i<PARTICLE_COUNT;i++){
+        var dx=pos[i*3],dy=pos[i*3+1],dz=pos[i*3+2];
+        var d=Math.sqrt(dx*dx+dy*dy+dz*dz)||1;
+        pVel[i*3]   = (dx/d)*0.06 + (Math.random()-0.5)*0.02;
+        pVel[i*3+1] = (dy/d)*0.06 + (Math.random()-0.5)*0.02;
+        pVel[i*3+2] = (dz/d)*0.06 + (Math.random()-0.5)*0.02;
+      }
+    } else if(type === 'error'){
+      fx.mode = 'error';
+      fx.t0 = now;
+      shockMat.color.set(0xe06060);
+    }
+  };
+
+  // ── Resize Handler ───────────────────────────
+  window.addEventListener('resize', function(){
+    const w = container.clientWidth;
+    const h = container.clientHeight;
+    camera.aspect = w / h;
+    camera.updateProjectionMatrix();
+    renderer.setSize(w, h);
+  });
+
+  // ── Theme Update ─────────────────────────────
+  window.updateSceneTheme = function(theme){
+    const dark = theme === 'dark';
+    scene.fog.color.set(dark ? 0x0a0e1a : 0xe8ecf2);
+    renderer.setClearColor(0x000000, 0);
+    if(fx.mode === 'idle'){
+      coreMat.color.set(dark ? 0x4ecdc4 : 0x2ba89e);
+      glowMat.color.set(dark ? 0x4ecdc4 : 0x2ba89e);
+      pMat.color.set(dark ? 0x4ecdc4 : 0x2ba89e);
+      edgeMat.color.set(dark ? 0x4ecdc4 : 0x2ba89e);
+    }
+    torusMat.color.set(dark ? 0xd4a574 : 0xb8864a);
+    torus2Mat.color.set(dark ? 0x4ecdc4 : 0x2ba89e);
+    flowGroup.children.forEach(function(l){ l.material.color.set(dark ? 0xd4a574 : 0xb8864a); });
+  };
+})();
+</script>
+</body>
+</html>

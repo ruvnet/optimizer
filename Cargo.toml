@@ -88,6 +88,8 @@ windows = { version = "0.58", features = [
     "Win32_UI_Shell",
     "Win32_UI_WindowsAndMessaging",
     "Win32_Graphics_Dxgi",
+    "Win32_Graphics_Gdi",
+    "Win32_Graphics_Dwm",
 ]}
 
 winapi = { version = "0.3", features = [
@@ -104,6 +106,10 @@ interprocess = "2.0"
 # WASM runtime for RuVector (Windows)
 wasmer = "4.3"
 wasmer-compiler-singlepass = "4.3"
+
+# WebView2 Control Center (tao windowing + wry webview)
+tao = "0.28"
+wry = "0.39"
 
 # ============================================================================
 # macOS-specific dependencies

@@ -109,15 +109,19 @@ impl CpuCapabilities {
 
     #[cfg(target_arch = "x86_64")]
     fn get_model() -> String {
-        let mut model = String::new();
+        let mut raw = Vec::with_capacity(48);
         unsafe {
             for i in 0x80000002u32..=0x80000004u32 {
                 let result = __cpuid(i);
                 let bytes: [u8; 16] = std::mem::transmute([result.eax, result.ebx, result.ecx, result.edx]);
-                model.push_str(&String::from_utf8_lossy(&bytes));
+                raw.extend_from_slice(&bytes);
             }
         }
-        model.trim().to_string()
+        // Strip null bytes and any trailing garbage before converting
+        if let Some(end) = raw.iter().position(|&b| b == 0) {
+            raw.truncate(end);
+        }
+        String::from_utf8_lossy(&raw).trim().to_string()
     }
 
     #[cfg(not(target_arch = "x86_64"))]
