@@ -690,6 +690,41 @@ This includes:
 - Integration ecosystem (agentic-flow, agentdb, ruv-swarm, flow-nexus, agentic-jujutsu)
 - Performance targets and status
 
+## System Tray Application (RuVector MemOpt Tray)
+
+The project includes a Windows system tray application built in Rust.
+
+### Executables
+
+| File | Size | Purpose |
+|------|------|---------|
+| `dist/ruvector-memopt-tray.exe` | ~1.9MB | Main tray binary (use this) |
+| `dist/RuVectorTray.exe` | ~120KB | Launcher stub (do not use directly) |
+
+### Running
+
+```bash
+# Launch manually
+start "" "C:\Users\ruv\Projects\ruvector-memopt\dist\ruvector-memopt-tray.exe"
+```
+
+### Auto-Start on Boot
+
+Registered in Windows startup via registry key:
+```
+HKCU\Software\Microsoft\Windows\CurrentVersion\Run\RuVectorTray
+```
+Value: `C:\Users\ruv\Projects\ruvector-memopt\dist\ruvector-memopt-tray.exe`
+
+To remove auto-start:
+```powershell
+Remove-ItemProperty -Path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Run' -Name 'RuVectorTray'
+```
+
+### Build
+
+The tray app is a Rust project. Build targets are in `target/debug/` and `target/release/`. Production binaries are copied to `dist/`.
+
 ## Support
 
 - Documentation: https://github.com/ruvnet/claude-flow
