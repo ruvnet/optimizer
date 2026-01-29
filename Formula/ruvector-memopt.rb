@@ -1,7 +1,7 @@
 class RuvectorMemopt < Formula
   desc "Intelligent cross-platform memory optimizer with neural learning"
   homepage "https://github.com/ruvnet/optimizer"
-  url "https://github.com/ruvnet/optimizer/archive/refs/tags/v0.4.0.tar.gz"
+  url "https://github.com/ruvnet/optimizer/archive/refs/tags/v0.5.0.tar.gz"
   sha256 ""  # TODO: Update after creating GitHub release
   license "MIT"
   head "https://github.com/ruvnet/optimizer.git", branch: "master"
