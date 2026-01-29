@@ -21,6 +21,8 @@ pub const AUTO_OPTIMIZE_INTERVAL: u64 = 60;
 const GITHUB_URL: &str = "https://github.com/ruvnet/optimizer";
 /// Version string
 const VERSION: &str = env!("CARGO_PKG_VERSION");
+/// LaunchAgent plist identifier
+const LAUNCH_AGENT_LABEL: &str = "com.ruvector.memopt";
 
 /// Tray settings for persistence
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
@@ -87,6 +89,7 @@ struct TrayState {
     tray_icon: tray_icon::TrayIcon,
     status_item: MenuItem,
     auto_item: CheckMenuItem,
+    autostart_item: CheckMenuItem,
     optimize_id: tray_icon::menu::MenuId,
     purge_id: tray_icon::menu::MenuId,
     app_id: tray_icon::menu::MenuId,
@@ -94,6 +97,7 @@ struct TrayState {
     activity_id: tray_icon::menu::MenuId,
     quit_id: tray_icon::menu::MenuId,
     auto_id: tray_icon::menu::MenuId,
+    autostart_id: tray_icon::menu::MenuId,
     github_id: tray_icon::menu::MenuId,
     threshold_75_id: tray_icon::menu::MenuId,
     threshold_80_id: tray_icon::menu::MenuId,
@@ -187,8 +191,14 @@ impl MacTrayApp {
                     settings_for_loop.auto_optimize,
                     None,
                 );
+                let autostart_item = CheckMenuItem::new(
+                    "Start at Login",
+                    true,
+                    is_autostart_installed(),
+                    None,
+                );
                 let optimize_item = MenuItem::new("Optimize Now", true, None);
-                let purge_item = MenuItem::new("Deep Clean (Purge)", true, None);
+                let purge_item = MenuItem::new("Deep Clean (sudo)", true, None);
                 let app_item = MenuItem::new("Optimize Apps", true, None);
 
                 // Settings submenu
@@ -214,6 +224,7 @@ impl MacTrayApp {
                 let _ = menu.append(&arch_item);
                 let _ = menu.append(&PredefinedMenuItem::separator());
                 let _ = menu.append(&auto_item);
+                let _ = menu.append(&autostart_item);
                 let _ = menu.append(&optimize_item);
                 let _ = menu.append(&purge_item);
                 let _ = menu.append(&app_item);
@@ -234,6 +245,7 @@ impl MacTrayApp {
                 let activity_id = activity_item.id().clone();
                 let quit_id = quit_item.id().clone();
                 let auto_id = auto_item.id().clone();
+                let autostart_id = autostart_item.id().clone();
                 let github_id = github_item.id().clone();
                 let threshold_75_id = threshold_75.id().clone();
                 let threshold_80_id = threshold_80.id().clone();
@@ -254,6 +266,7 @@ impl MacTrayApp {
                                 tray_icon,
                                 status_item,
                                 auto_item,
+                                autostart_item,
                                 optimize_id,
                                 purge_id,
                                 app_id,
@@ -261,6 +274,7 @@ impl MacTrayApp {
                                 activity_id,
                                 quit_id,
                                 auto_id,
+                                autostart_id,
                                 github_id,
                                 threshold_75_id,
                                 threshold_80_id,
@@ -382,6 +396,29 @@ impl MacTrayApp {
                         s.auto_optimize = new_val;
                         let _ = s.save();
                     }
+                } else if event.id == state.autostart_id {
+                    let currently_installed = is_autostart_installed();
+                    if currently_installed {
+                        match uninstall_autostart() {
+                            Ok(()) => {
+                                let _ = state.autostart_item.set_checked(false);
+                                show_toast("Start at Login", "Disabled - won't launch at login", 0.0);
+                            }
+                            Err(e) => {
+                                show_toast("Error", &format!("Failed to disable: {}", e), 0.0);
+                            }
+                        }
+                    } else {
+                        match install_autostart() {
+                            Ok(()) => {
+                                let _ = state.autostart_item.set_checked(true);
+                                show_toast("Start at Login", "Enabled - will launch at login", 0.0);
+                            }
+                            Err(e) => {
+                                show_toast("Error", &format!("Failed to enable: {}", e), 0.0);
+                            }
+                        }
+                    }
                 } else if event.id == state.threshold_75_id {
                     current_threshold.store(75, Ordering::SeqCst);
                     let _ = state.threshold_75.set_checked(true);
@@ -446,6 +483,43 @@ fn get_memory_status_text() -> String {
 fn run_optimization(aggressive: bool, total_freed: Arc<AtomicU32>) {
     std::thread::spawn(move || {
         let optimizer = MacMemoryOptimizer::new();
+
+        // If aggressive (purge) requested but no sudo, use admin password prompt
+        if aggressive && !optimizer.has_sudo_privileges() {
+            match run_purge_with_admin() {
+                Ok((freed, duration)) => {
+                    let current = total_freed.load(Ordering::SeqCst);
+                    total_freed.store(current + freed as u32, Ordering::SeqCst);
+
+                    let title = if freed > 100.0 {
+                        "✅ Deep Clean Complete!"
+                    } else if freed > 0.0 {
+                        "💾 Deep Clean Done"
+                    } else {
+                        "ℹ️ Caches Already Clear"
+                    };
+
+                    let msg = if freed > 0.0 {
+                        format!("Freed {:.0} MB via purge • {}ms", freed, duration)
+                    } else {
+                        "System caches were already clean".to_string()
+                    };
+
+                    show_toast(title, &msg, freed);
+                    tracing::info!("Admin purge: freed {:.1} MB in {}ms", freed, duration);
+                }
+                Err(e) => {
+                    if e.contains("cancelled") {
+                        tracing::info!("User cancelled admin purge");
+                    } else {
+                        show_toast("❌ Deep Clean Failed", &e, 0.0);
+                        tracing::error!("Admin purge error: {}", e);
+                    }
+                }
+            }
+            return;
+        }
+
         match optimizer.optimize(aggressive) {
             Ok(result) => {
                 let current = total_freed.load(Ordering::SeqCst);
@@ -719,6 +793,138 @@ fn create_icon_with_usage(usage_percent: u32) -> Vec<u8> {
     }
 
     data
+}
+
+// =============================================================================
+// Launchd Auto-Start Management
+// =============================================================================
+
+/// Get the path to the LaunchAgent plist
+fn launchd_plist_path() -> std::path::PathBuf {
+    let home = std::env::var("HOME").unwrap_or_else(|_| "/tmp".to_string());
+    std::path::PathBuf::from(home)
+        .join("Library")
+        .join("LaunchAgents")
+        .join(format!("{}.plist", LAUNCH_AGENT_LABEL))
+}
+
+/// Check if auto-start is currently installed
+pub fn is_autostart_installed() -> bool {
+    launchd_plist_path().exists()
+}
+
+/// Install launchd plist for auto-start at login
+pub fn install_autostart() -> Result<(), String> {
+    let plist_path = launchd_plist_path();
+
+    // Ensure LaunchAgents directory exists
+    if let Some(parent) = plist_path.parent() {
+        std::fs::create_dir_all(parent)
+            .map_err(|e| format!("Failed to create LaunchAgents dir: {}", e))?;
+    }
+
+    // Find the binary path
+    let binary_path = std::env::current_exe()
+        .map_err(|e| format!("Cannot determine binary path: {}", e))?;
+
+    let plist_content = format!(r#"<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>{label}</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>{binary}</string>
+        <string>tray</string>
+    </array>
+    <key>RunAtLoad</key>
+    <true/>
+    <key>KeepAlive</key>
+    <false/>
+    <key>ProcessType</key>
+    <string>Interactive</string>
+    <key>StandardOutPath</key>
+    <string>/tmp/ruvector-memopt.log</string>
+    <key>StandardErrorPath</key>
+    <string>/tmp/ruvector-memopt.err</string>
+</dict>
+</plist>"#,
+        label = LAUNCH_AGENT_LABEL,
+        binary = binary_path.display(),
+    );
+
+    std::fs::write(&plist_path, plist_content)
+        .map_err(|e| format!("Failed to write plist: {}", e))?;
+
+    // Load the agent
+    let _ = Command::new("launchctl")
+        .args(["load", "-w"])
+        .arg(&plist_path)
+        .output();
+
+    tracing::info!("Auto-start installed: {}", plist_path.display());
+    Ok(())
+}
+
+/// Uninstall launchd plist (disable auto-start)
+pub fn uninstall_autostart() -> Result<(), String> {
+    let plist_path = launchd_plist_path();
+
+    if plist_path.exists() {
+        // Unload first
+        let _ = Command::new("launchctl")
+            .args(["unload", "-w"])
+            .arg(&plist_path)
+            .output();
+
+        std::fs::remove_file(&plist_path)
+            .map_err(|e| format!("Failed to remove plist: {}", e))?;
+
+        tracing::info!("Auto-start removed");
+    }
+
+    Ok(())
+}
+
+// =============================================================================
+// Sudo Optimization via osascript
+// =============================================================================
+
+/// Run purge with admin privileges via macOS password dialog
+fn run_purge_with_admin() -> Result<(f64, u64), String> {
+    let start = std::time::Instant::now();
+    let before = MacMemoryOptimizer::get_memory_status()
+        .map_err(|e| e.to_string())?;
+
+    // Use osascript to prompt for admin password and run purge
+    let script = r#"do shell script "purge" with administrator privileges"#;
+
+    let output = Command::new("osascript")
+        .arg("-e")
+        .arg(script)
+        .output()
+        .map_err(|e| format!("Failed to run osascript: {}", e))?;
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        if stderr.contains("User canceled") || stderr.contains("-128") {
+            return Err("User cancelled".into());
+        }
+        return Err(format!("Purge failed: {}", stderr));
+    }
+
+    // Wait for memory to settle
+    std::thread::sleep(std::time::Duration::from_millis(500));
+
+    let after = MacMemoryOptimizer::get_memory_status()
+        .map_err(|e| e.to_string())?;
+
+    let freed = (after.available_physical_mb - before.available_physical_mb).max(0.0);
+    let duration = start.elapsed().as_millis() as u64;
+
+    tracing::info!("Admin purge: freed {:.1} MB in {}ms", freed, duration);
+    Ok((freed, duration))
 }
 
 impl Default for MacTrayApp {
