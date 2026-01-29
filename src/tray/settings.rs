@@ -17,6 +17,13 @@ pub struct TraySettings {
 
     /// AI Mode settings
     pub ai_mode: AIModeSettings,
+
+    /// UI theme ("dark" or "light")
+    #[serde(default = "default_theme")]
+    pub theme: String,
+    /// Whether the welcome screen has been shown
+    #[serde(default)]
+    pub welcome_shown: bool,
 }
 
 /// AI Mode specific settings
@@ -36,6 +43,10 @@ pub struct AIModeSettings {
     pub vram_reserve_percent: u32,
 }
 
+fn default_theme() -> String {
+    "dark".to_string()
+}
+
 impl Default for TraySettings {
     fn default() -> Self {
         Self {
@@ -43,6 +54,8 @@ impl Default for TraySettings {
             threshold: 75,
             interval_secs: 60,
             ai_mode: AIModeSettings::default(),
+            theme: default_theme(),
+            welcome_shown: false,
         }
     }
 }

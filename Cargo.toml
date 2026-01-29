@@ -107,6 +107,10 @@ interprocess = "2.0"
 wasmer = "4.3"
 wasmer-compiler-singlepass = "4.3"
 
+# WebView2 Control Center (tao windowing + wry webview)
+tao = "0.28"
+wry = "0.39"
+
 # ============================================================================
 # macOS-specific dependencies
 # ============================================================================

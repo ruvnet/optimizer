@@ -2,6 +2,7 @@
 
 mod settings;
 mod dialog;
+mod control_center;
 pub use settings::{TraySettings, AIModeSettings};
 
 use crate::windows::memory::WindowsMemoryOptimizer;
@@ -66,6 +67,7 @@ impl TrayApp {
         let optimize_item = MenuItem::new("Optimize Now", true, None);
         let aggressive_item = MenuItem::new("Deep Clean", true, None);
         let browser_item = MenuItem::new("Optimize Apps (Browsers/Electron)", true, None);
+        let control_center_item = MenuItem::new("Control Center", true, None);
 
         // AI Mode submenu - use saved settings
         let ai_menu = Submenu::new("AI Mode", true);
@@ -112,6 +114,8 @@ impl TrayApp {
         menu.append(&aggressive_item)?;
         menu.append(&browser_item)?;
         menu.append(&PredefinedMenuItem::separator())?;
+        menu.append(&control_center_item)?;
+        menu.append(&PredefinedMenuItem::separator())?;
         menu.append(&ai_menu)?;
         menu.append(&settings_menu)?;
         menu.append(&PredefinedMenuItem::separator())?;
@@ -139,6 +143,7 @@ impl TrayApp {
         let optimize_id = optimize_item.id().clone();
         let aggressive_id = aggressive_item.id().clone();
         let browser_id = browser_item.id().clone();
+        let control_center_id = control_center_item.id().clone();
         let cpu_id = cpu_item.id().clone();
         let quit_id = quit_item.id().clone();
         let auto_id = auto_item.id().clone();
@@ -261,6 +266,8 @@ impl TrayApp {
                 } else if event.id == browser_id {
                     let total_freed_clone = total_freed.clone();
                     run_browser_optimization(total_freed_clone);
+                } else if event.id == control_center_id {
+                    control_center::open(settings.clone());
                 } else if event.id == cpu_id {
                     show_cpu_info();
                 } else if event.id == github_id {

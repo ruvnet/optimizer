@@ -335,3 +335,53 @@ Full keyboard support following Windows accessibility guidelines:
 - [Windows UI Library design guidelines](https://learn.microsoft.com/en-us/windows/apps/design/)
 - [Win32 GDI custom drawing](https://learn.microsoft.com/en-us/windows/win32/gdi/painting-and-drawing)
 - [DWM window attributes](https://learn.microsoft.com/en-us/windows/win32/api/dwmapi/ne-dwmapi-dwmwindowattribute)
+
+
+# design 
+Design Style Prompt
+
+Design a technical infographic that explains a living, self maintaining AI world model. The visual language should feel structural, alive, and restrained. This is not a dashboard and not a poster. It should feel like a system diagram that quietly thinks.
+
+Visual tone
+Calm, deliberate, intelligent. No sci fi tropes. No faces. No mascots. Avoid artificial glow effects. Prefer subtle gradients and physical metaphors such as pressure, flow, and balance.
+
+Color and texture
+Primary palette uses deep navy, graphite, and charcoal. Secondary accents use muted cyan and desaturated amber. Background is dark, matte, and lightly textured like fine paper or anodized metal. Contrast comes from spacing, hierarchy, and geometry rather than brightness.
+
+Overall layout
+The composition is radial but asymmetrical, suggesting motion without chaos. At the center is a quiet core labeled World Model. Around it are four concentric but slightly offset layers labeled:
+
+Vectors
+Graphs
+Attention
+Coherence
+
+Each layer partially overlaps the next, implying interaction rather than isolation.
+
+Visual metaphors by layer
+
+Vectors
+Shown as sparse points in a curved coordinate field. Distances are visible. Some points drift slowly to suggest learning and adaptation.
+
+Graphs
+Overlaid node edge structures with varying edge thickness and tension. Some edges fade or subtly rewire over time.
+
+Attention
+Represented as directional flow lines that brighten and dim as they route energy or focus across the graph. Flow feels intentional and selective.
+
+Coherence
+Shown as structural stress lines or cut boundaries. Use soft heat shading or fracture like patterns to show disagreement building and resolving.
+
+Runtime loop
+At the base, include a thin circular loop:
+Ingest → Embed → Link → Measure → Gate → Act → Settle
+The loop should feel like a heartbeat or control cycle, not a linear pipeline.
+
+Typography
+Modern sans serif. Technical but human. Headers are medium weight. Labels are light. Text is minimal and precise. No paragraphs inside the graphic.
+
+Motion guidance
+If animated, motion is slow and intentional. Gentle drift, fades, and flow emphasis only. Nothing pulses aggressively or draws attention to itself.
+
+Overall feeling
+This should look like an engineering whitepaper that learned to breathe. Structure over spectacle. Meaning over decoration. A world model that remains intact while everything within it moves.
