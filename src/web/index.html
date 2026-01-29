@@ -723,684 +723,83 @@ footer{
     <!-- PAGE: ADR-013 Workspace Profiles                           -->
     <!-- ═══════════════════════════════════════════════════════════ -->
     <div class="page" id="page-profiles">
-      <div class="page-inner">
-        <div class="page-header">
-          <span class="page-icon">&#128194;</span>
-          <h2>Workspace Profiles</h2>
-        </div>
-        <div class="page-status">ADR-013 &middot; Placeholder</div>
-        <p class="page-desc">
-          Context-aware memory optimization profiles that auto-detect your
-          workload (development, gaming, creative, office) and apply tuned
-          memory strategies. Switch profiles manually or let the AI engine
-          detect and apply them automatically.
-        </p>
-        <div class="page-grid">
-          <div class="ph-card">
-            <div class="ph-card-title">Active Profile</div>
-            <div class="ph-big-number">DEV</div>
-            <div class="ph-big-label">Development Profile</div>
-            <div class="ph-chart">Profile switching timeline</div>
-          </div>
-          <div class="ph-card">
-            <div class="ph-card-title">Available Profiles</div>
-            <div class="ph-list-item"><span class="ph-dot" style="background:var(--accent-cyan)"></span> Development</div>
-            <div class="ph-list-item"><span class="ph-dot" style="background:var(--accent-green)"></span> Gaming</div>
-            <div class="ph-list-item"><span class="ph-dot" style="background:var(--accent-amber)"></span> Creative (Photoshop/Video)</div>
-            <div class="ph-list-item"><span class="ph-dot" style="background:var(--accent-purple)"></span> Office / Browsing</div>
-            <div class="ph-list-item"><span class="ph-dot" style="background:var(--accent-red)"></span> Server / Headless</div>
-          </div>
-          <div class="ph-card">
-            <div class="ph-card-title">Profile Settings</div>
-            <div class="ph-field"><span class="ph-field-label">Auto-Detect</span><span class="ph-field-value">-- enabled --</span></div>
-            <div class="ph-field"><span class="ph-field-label">Detection Method</span><span class="ph-field-value">-- foreground app --</span></div>
-            <div class="ph-field"><span class="ph-field-label">Switch Delay</span><span class="ph-field-value">-- 5s --</span></div>
-            <div class="ph-field"><span class="ph-field-label">Hotkey</span><span class="ph-field-value">-- Ctrl+Shift+P --</span></div>
-          </div>
-          <div class="ph-card">
-            <div class="ph-card-title">Memory Allocation</div>
-            <div class="ph-bar-row">
-              <span class="ph-bar-label">IDE/Editor</span>
-              <div class="ph-bar"><div class="ph-bar-fill" style="width:60%;background:var(--accent-cyan)"></div></div>
-              <span class="ph-bar-value">60%</span>
-            </div>
-            <div class="ph-bar-row">
-              <span class="ph-bar-label">Build Tools</span>
-              <div class="ph-bar"><div class="ph-bar-fill" style="width:25%;background:var(--accent-amber)"></div></div>
-              <span class="ph-bar-value">25%</span>
-            </div>
-            <div class="ph-bar-row">
-              <span class="ph-bar-label">Browser</span>
-              <div class="ph-bar"><div class="ph-bar-fill" style="width:10%;background:var(--accent-green)"></div></div>
-              <span class="ph-bar-value">10%</span>
-            </div>
-            <div class="ph-bar-row">
-              <span class="ph-bar-label">System</span>
-              <div class="ph-bar"><div class="ph-bar-fill" style="width:5%;background:var(--text-dim)"></div></div>
-              <span class="ph-bar-value">5%</span>
-            </div>
-          </div>
-        </div>
-        <div class="ph-actions">
-          <button class="ph-btn">Create Custom Profile</button>
-          <button class="ph-btn">Import Profile</button>
-          <button class="ph-btn">Export Current</button>
-        </div>
-      </div>
+      <!-- ADR-013: Workspace Profiles (rendered by components/profiles.js) -->
     </div>
 
     <!-- ═══════════════════════════════════════════════════════════ -->
     <!-- PAGE: ADR-014 System Health Score                          -->
     <!-- ═══════════════════════════════════════════════════════════ -->
     <div class="page" id="page-health">
-      <div class="page-inner">
-        <div class="page-header">
-          <span class="page-icon">&#128154;</span>
-          <h2>System Health Score</h2>
-        </div>
-        <div class="page-status">ADR-014 &middot; Placeholder</div>
-        <p class="page-desc">
-          A composite health score across 8 dimensions: memory pressure,
-          fragmentation, page faults, working set efficiency, swap usage,
-          cache hit ratio, thermal state, and process stability. Grades
-          from A+ to F with actionable recommendations.
-        </p>
-        <div class="page-grid">
-          <div class="ph-card" style="text-align:center">
-            <div class="ph-card-title">Overall Grade</div>
-            <div class="ph-grade">B+</div>
-            <div style="margin-top:8px;font-size:11px;color:var(--text-secondary)">Score: 82 / 100</div>
-          </div>
-          <div class="ph-card">
-            <div class="ph-card-title">Health Dimensions</div>
-            <div class="ph-bar-row">
-              <span class="ph-bar-label">Memory</span>
-              <div class="ph-bar"><div class="ph-bar-fill" style="width:85%;background:var(--accent-green)"></div></div>
-              <span class="ph-bar-value">85</span>
-            </div>
-            <div class="ph-bar-row">
-              <span class="ph-bar-label">Fragment.</span>
-              <div class="ph-bar"><div class="ph-bar-fill" style="width:70%;background:var(--accent-amber)"></div></div>
-              <span class="ph-bar-value">70</span>
-            </div>
-            <div class="ph-bar-row">
-              <span class="ph-bar-label">Page Faults</span>
-              <div class="ph-bar"><div class="ph-bar-fill" style="width:92%;background:var(--accent-green)"></div></div>
-              <span class="ph-bar-value">92</span>
-            </div>
-            <div class="ph-bar-row">
-              <span class="ph-bar-label">Working Set</span>
-              <div class="ph-bar"><div class="ph-bar-fill" style="width:78%;background:var(--accent-cyan)"></div></div>
-              <span class="ph-bar-value">78</span>
-            </div>
-            <div class="ph-bar-row">
-              <span class="ph-bar-label">Swap</span>
-              <div class="ph-bar"><div class="ph-bar-fill" style="width:88%;background:var(--accent-green)"></div></div>
-              <span class="ph-bar-value">88</span>
-            </div>
-            <div class="ph-bar-row">
-              <span class="ph-bar-label">Cache Ratio</span>
-              <div class="ph-bar"><div class="ph-bar-fill" style="width:65%;background:var(--accent-amber)"></div></div>
-              <span class="ph-bar-value">65</span>
-            </div>
-            <div class="ph-bar-row">
-              <span class="ph-bar-label">Thermal</span>
-              <div class="ph-bar"><div class="ph-bar-fill" style="width:95%;background:var(--accent-green)"></div></div>
-              <span class="ph-bar-value">95</span>
-            </div>
-            <div class="ph-bar-row">
-              <span class="ph-bar-label">Stability</span>
-              <div class="ph-bar"><div class="ph-bar-fill" style="width:80%;background:var(--accent-cyan)"></div></div>
-              <span class="ph-bar-value">80</span>
-            </div>
-          </div>
-          <div class="ph-card">
-            <div class="ph-card-title">Score History (24h)</div>
-            <div class="ph-chart ph-chart-tall">Score trend chart placeholder</div>
-          </div>
-          <div class="ph-card">
-            <div class="ph-card-title">Recommendations</div>
-            <div class="ph-list-item"><span class="ph-dot" style="background:var(--accent-amber)"></span> Defragment memory to improve fragmentation score</div>
-            <div class="ph-list-item"><span class="ph-dot" style="background:var(--accent-amber)"></span> Reduce browser tab count to improve cache ratio</div>
-            <div class="ph-list-item"><span class="ph-dot" style="background:var(--accent-green)"></span> Thermal state is excellent</div>
-          </div>
-        </div>
-      </div>
+      <!-- ADR-014: System Health Score (rendered by components/health.js) -->
     </div>
 
     <!-- ═══════════════════════════════════════════════════════════ -->
     <!-- PAGE: ADR-015 Startup Optimizer                            -->
     <!-- ═══════════════════════════════════════════════════════════ -->
     <div class="page" id="page-startup">
-      <div class="page-inner">
-        <div class="page-header">
-          <span class="page-icon">&#9889;</span>
-          <h2>Startup Optimizer</h2>
-        </div>
-        <div class="page-status">ADR-015 &middot; Placeholder</div>
-        <p class="page-desc">
-          PageRank-based startup impact scoring. Analyzes boot-time
-          programs, ranks them by dependency chains and resource cost,
-          and applies staggered boot tiers to minimize login-to-ready time.
-        </p>
-        <div class="page-grid">
-          <div class="ph-card">
-            <div class="ph-card-title">Boot Time</div>
-            <div class="ph-big-number">--s</div>
-            <div class="ph-big-label">Login-to-Ready</div>
-            <div class="ph-chart">Boot time trend graph</div>
-          </div>
-          <div class="ph-card">
-            <div class="ph-card-title">Startup Programs</div>
-            <div class="ph-field"><span class="ph-field-label">Total Items</span><span class="ph-field-value">-- --</span></div>
-            <div class="ph-field"><span class="ph-field-label">Deferred</span><span class="ph-field-value">-- --</span></div>
-            <div class="ph-field"><span class="ph-field-label">Disabled</span><span class="ph-field-value">-- --</span></div>
-            <div class="ph-field"><span class="ph-field-label">Critical Path</span><span class="ph-field-value">-- --</span></div>
-          </div>
-          <div class="ph-card">
-            <div class="ph-card-title">Boot Tiers</div>
-            <div class="ph-list-item"><span class="ph-dot" style="background:var(--accent-red)"></span> Tier 0 - Immediate (critical drivers)</div>
-            <div class="ph-list-item"><span class="ph-dot" style="background:var(--accent-amber)"></span> Tier 1 - Early (security, auth)</div>
-            <div class="ph-list-item"><span class="ph-dot" style="background:var(--accent-cyan)"></span> Tier 2 - Normal (user apps)</div>
-            <div class="ph-list-item"><span class="ph-dot" style="background:var(--accent-green)"></span> Tier 3 - Lazy (background services)</div>
-          </div>
-          <div class="ph-card">
-            <div class="ph-card-title">PageRank Scores</div>
-            <div class="ph-chart ph-chart-tall">Startup dependency graph visualization</div>
-          </div>
-        </div>
-        <div class="ph-actions">
-          <button class="ph-btn">Analyze Boot</button>
-          <button class="ph-btn">Apply Recommendations</button>
-          <button class="ph-btn">Reset to Default</button>
-        </div>
-      </div>
+      <!-- ADR-015: Startup Optimizer (rendered by components/startup.js) -->
     </div>
 
     <!-- ═══════════════════════════════════════════════════════════ -->
-    <!-- PAGE: ADR-016 WSL2 Memory Governor                         -->
+    <!-- PAGE: ADR-016 WSL2 Memory Governor (component: wsl2.js)   -->
     <!-- ═══════════════════════════════════════════════════════════ -->
-    <div class="page" id="page-wsl2">
-      <div class="page-inner">
-        <div class="page-header">
-          <span class="page-icon">&#128039;</span>
-          <h2>WSL2 Memory Governor</h2>
-        </div>
-        <div class="page-status">ADR-016 &middot; Placeholder</div>
-        <p class="page-desc">
-          Bridges Windows and Linux memory subsystems via /proc/meminfo
-          monitoring. Applies governor policies to prevent WSL2 from
-          consuming all host memory, with Docker container awareness.
-        </p>
-        <div class="page-grid">
-          <div class="ph-card">
-            <div class="ph-card-title">WSL2 Status</div>
-            <div class="ph-field"><span class="ph-field-label">WSL Detected</span><span class="ph-field-value">-- checking --</span></div>
-            <div class="ph-field"><span class="ph-field-label">Distro</span><span class="ph-field-value">-- --</span></div>
-            <div class="ph-field"><span class="ph-field-label">Kernel Version</span><span class="ph-field-value">-- --</span></div>
-            <div class="ph-field"><span class="ph-field-label">VM Memory</span><span class="ph-field-value">-- GB</span></div>
-          </div>
-          <div class="ph-card">
-            <div class="ph-card-title">Memory Split (Host vs WSL2)</div>
-            <div class="ph-chart">Stacked area chart: Host vs WSL2 memory over time</div>
-          </div>
-          <div class="ph-card">
-            <div class="ph-card-title">Governor Policy</div>
-            <div class="ph-field"><span class="ph-field-label">Active Policy</span><span class="ph-field-value">-- balanced --</span></div>
-            <div class="ph-field"><span class="ph-field-label">Max WSL2 Memory</span><span class="ph-field-value">-- 50% --</span></div>
-            <div class="ph-field"><span class="ph-field-label">Reclaim Threshold</span><span class="ph-field-value">-- 80% --</span></div>
-            <div class="ph-field"><span class="ph-field-label">Docker Awareness</span><span class="ph-field-value">-- enabled --</span></div>
-          </div>
-          <div class="ph-card">
-            <div class="ph-card-title">Docker Containers</div>
-            <div class="ph-chart">Container memory usage bars</div>
-          </div>
-        </div>
-      </div>
-    </div>
+    <div class="page" id="page-wsl2"></div>
 
     <!-- ═══════════════════════════════════════════════════════════ -->
-    <!-- PAGE: ADR-017 Build Environment Optimizer                  -->
+    <!-- PAGE: ADR-017 Build Environment Optimizer (component: build.js) -->
     <!-- ═══════════════════════════════════════════════════════════ -->
-    <div class="page" id="page-build">
-      <div class="page-inner">
-        <div class="page-header">
-          <span class="page-icon">&#128736;</span>
-          <h2>Build Environment Optimizer</h2>
-        </div>
-        <div class="page-status">ADR-017 &middot; Placeholder</div>
-        <p class="page-desc">
-          Detects active build processes (cargo, npm, webpack, MSBuild,
-          cmake) and applies memory boost actions: priority elevation,
-          working set expansion, and optional RAM disk for temp/output.
-        </p>
-        <div class="page-grid">
-          <div class="ph-card">
-            <div class="ph-card-title">Build Detection</div>
-            <div class="ph-field"><span class="ph-field-label">Active Build</span><span class="ph-field-value">-- none --</span></div>
-            <div class="ph-field"><span class="ph-field-label">Build System</span><span class="ph-field-value">-- --</span></div>
-            <div class="ph-field"><span class="ph-field-label">Parallelism</span><span class="ph-field-value">-- threads --</span></div>
-            <div class="ph-field"><span class="ph-field-label">Est. Memory</span><span class="ph-field-value">-- MB --</span></div>
-          </div>
-          <div class="ph-card">
-            <div class="ph-card-title">Supported Build Systems</div>
-            <div class="ph-list-item"><span class="ph-dot" style="background:var(--accent-amber)"></span> Cargo (Rust)</div>
-            <div class="ph-list-item"><span class="ph-dot" style="background:var(--accent-green)"></span> npm / Webpack / Vite</div>
-            <div class="ph-list-item"><span class="ph-dot" style="background:var(--accent-cyan)"></span> MSBuild / Visual Studio</div>
-            <div class="ph-list-item"><span class="ph-dot" style="background:var(--accent-purple)"></span> CMake / Make</div>
-            <div class="ph-list-item"><span class="ph-dot" style="background:var(--accent-red)"></span> Gradle / Maven</div>
-          </div>
-          <div class="ph-card">
-            <div class="ph-card-title">Boost Actions</div>
-            <div class="toggle-row"><span>Priority Elevation</span><span class="ph-field-value">-- --</span></div>
-            <div class="toggle-row"><span>Working Set Lock</span><span class="ph-field-value">-- --</span></div>
-            <div class="toggle-row"><span>RAM Disk for /tmp</span><span class="ph-field-value">-- --</span></div>
-            <div class="toggle-row"><span>Background App Throttle</span><span class="ph-field-value">-- --</span></div>
-          </div>
-          <div class="ph-card">
-            <div class="ph-card-title">Build Time History</div>
-            <div class="ph-chart ph-chart-tall">Build duration comparison chart</div>
-          </div>
-        </div>
-      </div>
-    </div>
+    <div class="page" id="page-build"></div>
 
     <!-- ═══════════════════════════════════════════════════════════ -->
-    <!-- PAGE: ADR-018 Spectral Leak Detector                       -->
+    <!-- PAGE: ADR-018 Spectral Leak Detector (component: leaks.js) -->
     <!-- ═══════════════════════════════════════════════════════════ -->
-    <div class="page" id="page-leaks">
-      <div class="page-inner">
-        <div class="page-header">
-          <span class="page-icon">&#128270;</span>
-          <h2>Spectral Leak Detector</h2>
-        </div>
-        <div class="page-status">ADR-018 &middot; Placeholder</div>
-        <p class="page-desc">
-          Time-series analysis with spectral decomposition to detect
-          slow memory leaks. Uses sliding windows, trend extraction,
-          and confidence scoring to identify processes with monotonic
-          growth patterns before they become critical.
-        </p>
-        <div class="page-grid">
-          <div class="ph-card">
-            <div class="ph-card-title">Leak Suspects</div>
-            <div class="ph-field"><span class="ph-field-label">Active Suspects</span><span class="ph-field-value">-- 0 --</span></div>
-            <div class="ph-field"><span class="ph-field-label">Monitoring</span><span class="ph-field-value">-- processes --</span></div>
-            <div class="ph-field"><span class="ph-field-label">Window Size</span><span class="ph-field-value">-- 30 min --</span></div>
-            <div class="ph-field"><span class="ph-field-label">Confidence Threshold</span><span class="ph-field-value">-- 0.85 --</span></div>
-          </div>
-          <div class="ph-card">
-            <div class="ph-card-title">Memory Growth Trend</div>
-            <div class="ph-chart ph-chart-tall">Time series with spectral decomposition overlay</div>
-          </div>
-          <div class="ph-card">
-            <div class="ph-card-title">Spectral Analysis</div>
-            <div class="ph-chart">Frequency domain chart (FFT)</div>
-          </div>
-          <div class="ph-card">
-            <div class="ph-card-title">Detection History</div>
-            <div class="ph-list-item"><span class="ph-dot" style="background:var(--text-dim)"></span> No leaks detected yet</div>
-          </div>
-        </div>
-        <div class="ph-actions">
-          <button class="ph-btn">Start Deep Scan</button>
-          <button class="ph-btn">Configure Thresholds</button>
-        </div>
-      </div>
-    </div>
+    <div class="page" id="page-leaks"></div>
 
     <!-- ═══════════════════════════════════════════════════════════ -->
-    <!-- PAGE: ADR-019 Predictive Prefetcher                        -->
+    <!-- PAGE: ADR-019 Predictive Prefetcher (component: prefetch.js) -->
     <!-- ═══════════════════════════════════════════════════════════ -->
-    <div class="page" id="page-prefetch">
-      <div class="page-inner">
-        <div class="page-header">
-          <span class="page-icon">&#128640;</span>
-          <h2>Predictive Prefetcher</h2>
-        </div>
-        <div class="page-status">ADR-019 &middot; Placeholder</div>
-        <p class="page-desc">
-          Markov-chain based application launch prediction. Learns your
-          usage patterns with temporal weights and prefetches application
-          data before you need it, reducing perceived launch times.
-        </p>
-        <div class="page-grid">
-          <div class="ph-card">
-            <div class="ph-card-title">Prediction Accuracy</div>
-            <div class="ph-big-number">--%</div>
-            <div class="ph-big-label">Hit Rate</div>
-            <div class="ph-chart">Accuracy over time</div>
-          </div>
-          <div class="ph-card">
-            <div class="ph-card-title">Predicted Next Apps</div>
-            <div class="ph-list-item"><span class="ph-dot" style="background:var(--accent-cyan)"></span> -- waiting for data --</div>
-          </div>
-          <div class="ph-card">
-            <div class="ph-card-title">Markov Chain State</div>
-            <div class="ph-field"><span class="ph-field-label">States Learned</span><span class="ph-field-value">-- 0 --</span></div>
-            <div class="ph-field"><span class="ph-field-label">Transitions</span><span class="ph-field-value">-- 0 --</span></div>
-            <div class="ph-field"><span class="ph-field-label">Time Decay</span><span class="ph-field-value">-- 0.95 --</span></div>
-            <div class="ph-field"><span class="ph-field-label">Prefetch Strategy</span><span class="ph-field-value">-- conservative --</span></div>
-          </div>
-          <div class="ph-card">
-            <div class="ph-card-title">Launch Time Savings</div>
-            <div class="ph-chart ph-chart-tall">Before/after launch time comparison</div>
-          </div>
-        </div>
-      </div>
-    </div>
+    <div class="page" id="page-prefetch"></div>
 
     <!-- ═══════════════════════════════════════════════════════════ -->
     <!-- PAGE: ADR-020 Thermal-Aware Scheduler                      -->
     <!-- ═══════════════════════════════════════════════════════════ -->
     <div class="page" id="page-thermal">
-      <div class="page-inner">
-        <div class="page-header">
-          <span class="page-icon">&#127777;</span>
-          <h2>Thermal-Aware Scheduler</h2>
-        </div>
-        <div class="page-status">ADR-020 &middot; Placeholder</div>
-        <p class="page-desc">
-          Monitors CPU thermal zones and adjusts memory operations to
-          avoid thermal throttling. Implements core migration strategies
-          and a Silent Mode that trades performance for quiet operation.
-        </p>
-        <div class="page-grid">
-          <div class="ph-card">
-            <div class="ph-card-title">Thermal Status</div>
-            <div class="ph-field"><span class="ph-field-label">CPU Package</span><span class="ph-field-value">-- &deg;C</span></div>
-            <div class="ph-field"><span class="ph-field-label">Hottest Core</span><span class="ph-field-value">-- &deg;C</span></div>
-            <div class="ph-field"><span class="ph-field-label">Throttle State</span><span class="ph-field-value">-- none --</span></div>
-            <div class="ph-field"><span class="ph-field-label">Fan Speed</span><span class="ph-field-value">-- RPM</span></div>
-          </div>
-          <div class="ph-card">
-            <div class="ph-card-title">Temperature History</div>
-            <div class="ph-chart ph-chart-tall">Per-core temperature heatmap over time</div>
-          </div>
-          <div class="ph-card">
-            <div class="ph-card-title">Thermal Zones</div>
-            <div class="ph-bar-row">
-              <span class="ph-bar-label">Green</span>
-              <div class="ph-bar"><div class="ph-bar-fill" style="width:100%;background:var(--accent-green)"></div></div>
-              <span class="ph-bar-value">&lt;70&deg;</span>
-            </div>
-            <div class="ph-bar-row">
-              <span class="ph-bar-label">Yellow</span>
-              <div class="ph-bar"><div class="ph-bar-fill" style="width:0%;background:var(--accent-amber)"></div></div>
-              <span class="ph-bar-value">70-85&deg;</span>
-            </div>
-            <div class="ph-bar-row">
-              <span class="ph-bar-label">Red</span>
-              <div class="ph-bar"><div class="ph-bar-fill" style="width:0%;background:var(--accent-red)"></div></div>
-              <span class="ph-bar-value">&gt;85&deg;</span>
-            </div>
-          </div>
-          <div class="ph-card">
-            <div class="ph-card-title">Scheduler Config</div>
-            <div class="toggle-row"><span>Silent Mode</span><span class="ph-field-value">-- off --</span></div>
-            <div class="toggle-row"><span>Core Migration</span><span class="ph-field-value">-- auto --</span></div>
-            <div class="toggle-row"><span>Thermal Prediction</span><span class="ph-field-value">-- enabled --</span></div>
-          </div>
-        </div>
-      </div>
+      <!-- ADR-020: Thermal-Aware Scheduler (rendered by components/thermal.js) -->
     </div>
 
     <!-- ═══════════════════════════════════════════════════════════ -->
     <!-- PAGE: ADR-021 WASM Plugin Marketplace                      -->
     <!-- ═══════════════════════════════════════════════════════════ -->
     <div class="page" id="page-plugins">
-      <div class="page-inner">
-        <div class="page-header">
-          <span class="page-icon">&#129520;</span>
-          <h2>WASM Plugin Marketplace</h2>
-        </div>
-        <div class="page-status">ADR-021 &middot; Placeholder</div>
-        <p class="page-desc">
-          Extend RuVector with sandboxed WASM plugins. Browse, install,
-          and manage plugins from a curated marketplace. Plugins run in
-          Wasmer 4.3 with capability-based security and Ed25519 signing.
-        </p>
-        <div class="page-grid">
-          <div class="ph-card">
-            <div class="ph-card-title">Installed Plugins</div>
-            <div class="ph-field"><span class="ph-field-label">Active</span><span class="ph-field-value">-- 0 --</span></div>
-            <div class="ph-field"><span class="ph-field-label">Available</span><span class="ph-field-value">-- -- --</span></div>
-            <div class="ph-field"><span class="ph-field-label">Updates</span><span class="ph-field-value">-- 0 --</span></div>
-          </div>
-          <div class="ph-card">
-            <div class="ph-card-title">Featured Plugins</div>
-            <div class="ph-list-item"><span class="ph-dot" style="background:var(--accent-cyan)"></span> Chrome Tab Optimizer</div>
-            <div class="ph-list-item"><span class="ph-dot" style="background:var(--accent-green)"></span> Game Memory Booster</div>
-            <div class="ph-list-item"><span class="ph-dot" style="background:var(--accent-amber)"></span> Docker Memory Limiter</div>
-            <div class="ph-list-item"><span class="ph-dot" style="background:var(--accent-purple)"></span> RAM Disk Manager</div>
-          </div>
-          <div class="ph-card">
-            <div class="ph-card-title">Plugin Security</div>
-            <div class="ph-field"><span class="ph-field-label">Sandbox</span><span class="ph-field-value">-- Wasmer 4.3 --</span></div>
-            <div class="ph-field"><span class="ph-field-label">Signing</span><span class="ph-field-value">-- Ed25519 --</span></div>
-            <div class="ph-field"><span class="ph-field-label">Capabilities</span><span class="ph-field-value">-- restricted --</span></div>
-          </div>
-          <div class="ph-card">
-            <div class="ph-card-title">Plugin Categories</div>
-            <div class="ph-chart">Category distribution pie chart</div>
-          </div>
-        </div>
-        <div class="ph-actions">
-          <button class="ph-btn">Browse Marketplace</button>
-          <button class="ph-btn">Upload Plugin</button>
-          <button class="ph-btn">Check Updates</button>
-        </div>
-      </div>
+      <!-- ADR-021: WASM Plugin Marketplace (rendered by components/plugins.js) -->
     </div>
 
     <!-- ═══════════════════════════════════════════════════════════ -->
     <!-- PAGE: ADR-022 GPU Memory Optimizer                         -->
     <!-- ═══════════════════════════════════════════════════════════ -->
     <div class="page" id="page-gpu">
-      <div class="page-inner">
-        <div class="page-header">
-          <span class="page-icon">&#127918;</span>
-          <h2>GPU Memory Optimizer</h2>
-        </div>
-        <div class="page-status">ADR-022 &middot; Placeholder</div>
-        <p class="page-desc">
-          Monitors and optimizes GPU/VRAM via NVML (NVIDIA) and DXGI
-          (all GPUs). Categorizes VRAM usage, enables AI model layer
-          offloading between system RAM and VRAM for ML workloads.
-        </p>
-        <div class="page-grid">
-          <div class="ph-card">
-            <div class="ph-card-title">GPU Status</div>
-            <div class="ph-field"><span class="ph-field-label">GPU Model</span><span class="ph-field-value">-- detecting --</span></div>
-            <div class="ph-field"><span class="ph-field-label">VRAM Total</span><span class="ph-field-value">-- GB</span></div>
-            <div class="ph-field"><span class="ph-field-label">VRAM Used</span><span class="ph-field-value">-- GB</span></div>
-            <div class="ph-field"><span class="ph-field-label">GPU Temp</span><span class="ph-field-value">-- &deg;C</span></div>
-            <div class="ph-field"><span class="ph-field-label">Driver API</span><span class="ph-field-value">-- --</span></div>
-          </div>
-          <div class="ph-card">
-            <div class="ph-card-title">VRAM Usage Breakdown</div>
-            <div class="ph-chart ph-chart-tall">Stacked bar: textures, framebuffers, models, other</div>
-          </div>
-          <div class="ph-card">
-            <div class="ph-card-title">VRAM Categories</div>
-            <div class="ph-bar-row">
-              <span class="ph-bar-label">Textures</span>
-              <div class="ph-bar"><div class="ph-bar-fill" style="width:0%;background:var(--accent-cyan)"></div></div>
-              <span class="ph-bar-value">--</span>
-            </div>
-            <div class="ph-bar-row">
-              <span class="ph-bar-label">Framebuffers</span>
-              <div class="ph-bar"><div class="ph-bar-fill" style="width:0%;background:var(--accent-amber)"></div></div>
-              <span class="ph-bar-value">--</span>
-            </div>
-            <div class="ph-bar-row">
-              <span class="ph-bar-label">AI Models</span>
-              <div class="ph-bar"><div class="ph-bar-fill" style="width:0%;background:var(--accent-green)"></div></div>
-              <span class="ph-bar-value">--</span>
-            </div>
-            <div class="ph-bar-row">
-              <span class="ph-bar-label">Other</span>
-              <div class="ph-bar"><div class="ph-bar-fill" style="width:0%;background:var(--text-dim)"></div></div>
-              <span class="ph-bar-value">--</span>
-            </div>
-          </div>
-          <div class="ph-card">
-            <div class="ph-card-title">AI Layer Offload</div>
-            <div class="toggle-row"><span>Auto-Offload</span><span class="ph-field-value">-- off --</span></div>
-            <div class="toggle-row"><span>Shared Memory</span><span class="ph-field-value">-- -- --</span></div>
-            <div class="ph-field"><span class="ph-field-label">Offload Strategy</span><span class="ph-field-value">-- none --</span></div>
-          </div>
-        </div>
-      </div>
+      <!-- ADR-022: GPU Memory Optimizer (rendered by components/gpu.js) -->
     </div>
 
     <!-- ═══════════════════════════════════════════════════════════ -->
     <!-- PAGE: ADR-023 Bloatware Silencer                           -->
     <!-- ═══════════════════════════════════════════════════════════ -->
     <div class="page" id="page-bloatware">
-      <div class="page-inner">
-        <div class="page-header">
-          <span class="page-icon">&#128683;</span>
-          <h2>Bloatware Silencer</h2>
-        </div>
-        <div class="page-status">ADR-023 &middot; Placeholder</div>
-        <p class="page-desc">
-          Identifies and silences resource-wasting processes using a
-          curated bloatware database. Three silencing levels: suspend,
-          limit, and quarantine. Corporate/enterprise detection prevents
-          disabling managed software.
-        </p>
-        <div class="page-grid">
-          <div class="ph-card">
-            <div class="ph-card-title">Scan Results</div>
-            <div class="ph-field"><span class="ph-field-label">Bloatware Found</span><span class="ph-field-value">-- 0 --</span></div>
-            <div class="ph-field"><span class="ph-field-label">Memory Reclaimable</span><span class="ph-field-value">-- MB</span></div>
-            <div class="ph-field"><span class="ph-field-label">Last Scan</span><span class="ph-field-value">-- never --</span></div>
-            <div class="ph-field"><span class="ph-field-label">Corporate Mode</span><span class="ph-field-value">-- auto --</span></div>
-          </div>
-          <div class="ph-card">
-            <div class="ph-card-title">Silencing Levels</div>
-            <div class="ph-list-item"><span class="ph-dot" style="background:var(--accent-amber)"></span> <b>Suspend</b> &mdash; Pause process, resume on demand</div>
-            <div class="ph-list-item"><span class="ph-dot" style="background:var(--accent-red)"></span> <b>Limit</b> &mdash; Cap CPU + memory usage</div>
-            <div class="ph-list-item"><span class="ph-dot" style="background:var(--text-dim)"></span> <b>Quarantine</b> &mdash; Prevent startup entirely</div>
-          </div>
-          <div class="ph-card">
-            <div class="ph-card-title">Detected Bloatware</div>
-            <div class="ph-chart">List of detected bloatware with actions</div>
-          </div>
-          <div class="ph-card">
-            <div class="ph-card-title">Memory Savings</div>
-            <div class="ph-chart">Before/after memory comparison</div>
-          </div>
-        </div>
-        <div class="ph-actions">
-          <button class="ph-btn">Scan Now</button>
-          <button class="ph-btn">Restore All</button>
-          <button class="ph-btn">Update Database</button>
-        </div>
-      </div>
+      <!-- ADR-023: Bloatware & Telemetry Silencer (rendered by components/bloatware.js) -->
     </div>
 
     <!-- ═══════════════════════════════════════════════════════════ -->
     <!-- PAGE: ADR-024 Time-Travel System State                     -->
     <!-- ═══════════════════════════════════════════════════════════ -->
     <div class="page" id="page-timeline">
-      <div class="page-inner">
-        <div class="page-header">
-          <span class="page-icon">&#9203;</span>
-          <h2>Time-Travel System State</h2>
-        </div>
-        <div class="page-status">ADR-024 &middot; Placeholder</div>
-        <p class="page-desc">
-          Capture system state snapshots and navigate through them like
-          a timeline. Compare any two snapshots to see what changed.
-          Diagnose issues by inspecting past states and optionally
-          roll back to a known-good configuration.
-        </p>
-        <div class="page-grid">
-          <div class="ph-card" style="grid-column:span 2">
-            <div class="ph-card-title">State Timeline</div>
-            <div class="ph-timeline">
-              <div class="ph-timeline-item active">
-                <div><b>Current State</b></div>
-                <div class="ph-timeline-time">-- now --</div>
-              </div>
-              <div class="ph-timeline-item">
-                <div>No snapshots captured yet</div>
-                <div class="ph-timeline-time">-- --</div>
-              </div>
-            </div>
-          </div>
-          <div class="ph-card">
-            <div class="ph-card-title">Snapshot Info</div>
-            <div class="ph-field"><span class="ph-field-label">Total Snapshots</span><span class="ph-field-value">-- 0 --</span></div>
-            <div class="ph-field"><span class="ph-field-label">Storage Used</span><span class="ph-field-value">-- 0 MB --</span></div>
-            <div class="ph-field"><span class="ph-field-label">Max Snapshots</span><span class="ph-field-value">-- 100 --</span></div>
-            <div class="ph-field"><span class="ph-field-label">Auto-Capture</span><span class="ph-field-value">-- 15 min --</span></div>
-          </div>
-          <div class="ph-card">
-            <div class="ph-card-title">Diff View</div>
-            <div class="ph-chart ph-chart-tall">Select two snapshots to compare</div>
-          </div>
-        </div>
-        <div class="ph-actions">
-          <button class="ph-btn">Capture Now</button>
-          <button class="ph-btn">Compare Snapshots</button>
-          <button class="ph-btn">Rollback</button>
-          <button class="ph-btn">Export Timeline</button>
-        </div>
-      </div>
+      <!-- ADR-024: Time-Travel System State (rendered by components/timeline.js) -->
     </div>
 
     <!-- ═══════════════════════════════════════════════════════════ -->
     <!-- PAGE: ADR-025 Agentic Desktop Automation                   -->
     <!-- ═══════════════════════════════════════════════════════════ -->
     <div class="page" id="page-agent">
-      <div class="page-inner">
-        <div class="page-header">
-          <span class="page-icon">&#129302;</span>
-          <h2>Agentic Desktop Automation</h2>
-        </div>
-        <div class="page-status">ADR-025 &middot; Placeholder</div>
-        <p class="page-desc">
-          AI agent that observes your desktop via a 3-tier vision model,
-          learns optimization patterns through online reinforcement learning
-          with LoRA fine-tuning, and autonomously manages system resources.
-          Protected by AIDefence against prompt injection.
-        </p>
-        <div class="page-grid">
-          <div class="ph-card">
-            <div class="ph-card-title">Agent Status</div>
-            <div class="ph-field"><span class="ph-field-label">State</span><span class="ph-field-value">-- inactive --</span></div>
-            <div class="ph-field"><span class="ph-field-label">Vision Model</span><span class="ph-field-value">-- not loaded --</span></div>
-            <div class="ph-field"><span class="ph-field-label">RL Episodes</span><span class="ph-field-value">-- 0 --</span></div>
-            <div class="ph-field"><span class="ph-field-label">Actions Taken</span><span class="ph-field-value">-- 0 --</span></div>
-            <div class="ph-field"><span class="ph-field-label">Success Rate</span><span class="ph-field-value">-- % --</span></div>
-          </div>
-          <div class="ph-card">
-            <div class="ph-card-title">Vision Pipeline</div>
-            <div class="ph-list-item"><span class="ph-dot" style="background:var(--accent-cyan)"></span> <b>Tier 1</b> &mdash; Fast screen classifier (50ms)</div>
-            <div class="ph-list-item"><span class="ph-dot" style="background:var(--accent-amber)"></span> <b>Tier 2</b> &mdash; Region detector (200ms)</div>
-            <div class="ph-list-item"><span class="ph-dot" style="background:var(--accent-purple)"></span> <b>Tier 3</b> &mdash; Full scene understanding (1s)</div>
-          </div>
-          <div class="ph-card">
-            <div class="ph-card-title">Learning Progress</div>
-            <div class="ph-chart ph-chart-tall">RL reward curve over episodes</div>
-          </div>
-          <div class="ph-card">
-            <div class="ph-card-title">Security (AIDefence)</div>
-            <div class="ph-field"><span class="ph-field-label">Injection Scans</span><span class="ph-field-value">-- 0 --</span></div>
-            <div class="ph-field"><span class="ph-field-label">Threats Blocked</span><span class="ph-field-value">-- 0 --</span></div>
-            <div class="ph-field"><span class="ph-field-label">Safety Level</span><span class="ph-field-value">-- high --</span></div>
-            <div class="ph-field"><span class="ph-field-label">Audit Log</span><span class="ph-field-value">-- empty --</span></div>
-          </div>
-        </div>
-        <div class="ph-actions">
-          <button class="ph-btn">Start Agent</button>
-          <button class="ph-btn">Training Mode</button>
-          <button class="ph-btn">View Audit Log</button>
-        </div>
-      </div>
+      <!-- ADR-025: Agentic Desktop Automation (rendered by components/agent.js) -->
     </div>
 
   </div><!-- /content -->
@@ -1427,6 +826,9 @@ footer{
 <!-- ── Three.js (CDN) ──────────────────────────────────────────── -->
 <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
 
+<!-- ── Page Components (injected at compile time by control_center.rs) ── -->
+<!-- {{COMPONENT_SCRIPTS}} -->
+
 <script>
 /* ================================================================
    RuVector Control Center – Client Logic
@@ -1448,6 +850,24 @@ function dismissWelcome(){
 }
 
 // ── Page Navigation ───────────────────────────────────────────
+// ── Component page init map ──────────────────────────────────
+var _pageInitMap = {
+  profiles:  'profilesInit',
+  health:    'healthInit',
+  startup:   'startupInit',
+  bloatware: 'Bloatware_Init',
+  timeline:  'Timeline_Init',
+  agent:     'Agent_Init',
+  thermal:   'thermal_Init',
+  plugins:   'plugins_Init',
+  gpu:       'gpu_Init',
+  wsl2:      'wsl2_Init',
+  build:     'build_Init',
+  leaks:     'leaks_Init',
+  prefetch:  'prefetch_Init'
+};
+var _pageInitialized = {};
+
 function showPage(id){
   // Hide all pages
   document.querySelectorAll('.page').forEach(function(p){ p.classList.remove('active'); });
@@ -1462,6 +882,14 @@ function showPage(id){
   // Resize Three.js if returning to dashboard
   if(id === 'dashboard' && typeof handleResize === 'function'){
     setTimeout(handleResize, 50);
+  }
+  // Initialize component pages on first visit
+  if(_pageInitMap[id] && !_pageInitialized[id]){
+    var initFn = window.RuVectorPages && window.RuVectorPages[_pageInitMap[id]];
+    if(typeof initFn === 'function'){
+      initFn(page);
+      _pageInitialized[id] = true;
+    }
   }
 }
 
@@ -2065,5 +1493,6 @@ setTimeout(function(){ requestMetrics(); requestProcesses(); requestSettings(); 
   };
 })();
 </script>
+
 </body>
 </html>

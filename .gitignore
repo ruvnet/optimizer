@@ -102,3 +102,9 @@ data/
 # Large model files
 *.gguf
 test_models/*.gguf
+
+# WebView2 runtime (auto-extracted, large)
+dist/*.WebView2/
+
+# Windows nul artifact
+nul

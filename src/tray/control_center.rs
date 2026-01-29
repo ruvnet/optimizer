@@ -80,7 +80,26 @@ fn run(settings: Arc<Mutex<TraySettings>>) -> Result<(), Box<dyn std::error::Err
 
     // Embed HTML and inject current settings via template replacement
     let html_src = include_str!("../web/index.html");
+
+    // Inline component scripts (embedded at compile time)
+    let component_scripts = [
+        concat!("<script>", include_str!("../web/components/profiles.js"), "</script>"),
+        concat!("<script>", include_str!("../web/components/health.js"), "</script>"),
+        concat!("<script>", include_str!("../web/components/startup.js"), "</script>"),
+        concat!("<script>", include_str!("../web/components/wsl2.js"), "</script>"),
+        concat!("<script>", include_str!("../web/components/build.js"), "</script>"),
+        concat!("<script>", include_str!("../web/components/leaks.js"), "</script>"),
+        concat!("<script>", include_str!("../web/components/prefetch.js"), "</script>"),
+        concat!("<script>", include_str!("../web/components/thermal.js"), "</script>"),
+        concat!("<script>", include_str!("../web/components/plugins.js"), "</script>"),
+        concat!("<script>", include_str!("../web/components/gpu.js"), "</script>"),
+        concat!("<script>", include_str!("../web/components/bloatware.js"), "</script>"),
+        concat!("<script>", include_str!("../web/components/timeline.js"), "</script>"),
+        concat!("<script>", include_str!("../web/components/agent.js"), "</script>"),
+    ].join("\n");
+
     let html = html_src
+        .replace("<!-- {{COMPONENT_SCRIPTS}} -->", &component_scripts)
         .replace("{{THEME}}", &theme)
         .replace("{{WELCOME_SHOWN}}", &welcome_shown.to_string());
 
