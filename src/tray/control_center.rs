@@ -96,11 +96,16 @@ fn run(settings: Arc<Mutex<TraySettings>>) -> Result<(), Box<dyn std::error::Err
         })
         .build()?;
 
-    // Push initial metrics
+    // Push initial metrics and settings
     let init_json = gather_metrics_json();
     let _ = webview.evaluate_script(&format!(
         "if(window.updateMetrics)window.updateMetrics({})",
         init_json
+    ));
+    let settings_json = gather_settings_json(&settings);
+    let _ = webview.evaluate_script(&format!(
+        "if(window.updateSettings)window.updateSettings({})",
+        settings_json
     ));
 
     event_loop.run_return(move |event, _, control_flow| {
@@ -149,6 +154,19 @@ fn handle_ipc(
             let aggressive = req["aggressive"].as_bool().unwrap_or(false);
             let json = run_optimize(aggressive);
             push_js(proxy, &format!("window.optimizeResult({})", json));
+        }
+        Some("get_settings") => {
+            let json = gather_settings_json(settings);
+            push_js(proxy, &format!("window.updateSettings({})", json));
+        }
+        Some("set_setting") => {
+            if let Some(key) = req["key"].as_str() {
+                apply_setting(settings, key, &req["value"]);
+            }
+        }
+        Some("optimize_apps") => {
+            let json = run_optimize_apps();
+            push_js(proxy, &format!("window.optimizeAppsResult({})", json));
         }
         Some("set_theme") => {
             if let Some(t) = req["theme"].as_str() {
@@ -262,4 +280,144 @@ fn run_optimize(aggressive: bool) -> String {
         })
         .to_string(),
     }
+}
+
+fn gather_settings_json(settings: &Arc<Mutex<TraySettings>>) -> String {
+    if let Ok(s) = settings.lock() {
+        serde_json::json!({
+            "auto_optimize": s.auto_optimize,
+            "threshold": s.threshold,
+            "interval_secs": s.interval_secs,
+            "ai_game_mode": s.ai_mode.game_mode,
+            "ai_focus_mode": s.ai_mode.focus_mode,
+            "ai_thermal": s.ai_mode.thermal_prediction,
+            "ai_preload": s.ai_mode.predictive_preload,
+            "version": env!("CARGO_PKG_VERSION")
+        })
+        .to_string()
+    } else {
+        "{}".to_string()
+    }
+}
+
+fn apply_setting(settings: &Arc<Mutex<TraySettings>>, key: &str, value: &serde_json::Value) {
+    if let Ok(mut s) = settings.lock() {
+        match key {
+            "auto_optimize" => {
+                if let Some(v) = value.as_bool() {
+                    s.auto_optimize = v;
+                }
+            }
+            "threshold" => {
+                if let Some(v) = value.as_u64() {
+                    s.threshold = v as u32;
+                }
+            }
+            "interval_secs" => {
+                if let Some(v) = value.as_u64() {
+                    s.interval_secs = v;
+                }
+            }
+            "ai_game_mode" => {
+                if let Some(v) = value.as_bool() {
+                    s.ai_mode.game_mode = v;
+                }
+            }
+            "ai_focus_mode" => {
+                if let Some(v) = value.as_bool() {
+                    s.ai_mode.focus_mode = v;
+                }
+            }
+            "ai_thermal" => {
+                if let Some(v) = value.as_bool() {
+                    s.ai_mode.thermal_prediction = v;
+                }
+            }
+            "ai_preload" => {
+                if let Some(v) = value.as_bool() {
+                    s.ai_mode.predictive_preload = v;
+                }
+            }
+            _ => {
+                tracing::debug!("Unknown setting key: {}", key);
+                return;
+            }
+        }
+        let _ = s.save();
+    }
+}
+
+fn run_optimize_apps() -> String {
+    use sysinfo::System;
+    use std::collections::HashMap;
+    use std::time::Instant;
+
+    let start = Instant::now();
+
+    const APP_PATTERNS: &[(&str, &[&str])] = &[
+        ("Brave", &["brave.exe", "brave"]),
+        ("Chrome", &["chrome.exe", "chrome"]),
+        ("Edge", &["msedge.exe", "msedge"]),
+        ("VSCode", &["code.exe", "code"]),
+        ("Discord", &["discord.exe", "discord"]),
+        ("Spotify", &["spotify.exe", "spotify"]),
+        ("WhatsApp", &["whatsapp.exe", "whatsapp"]),
+        ("Slack", &["slack.exe", "slack"]),
+        ("Teams", &["teams.exe", "ms-teams.exe", "teams"]),
+        ("Zoom", &["zoom.exe", "zoom", "zoomus", "cpthost.exe"]),
+        ("Obsidian", &["obsidian.exe", "obsidian"]),
+        ("Notion", &["notion.exe", "notion"]),
+        ("Figma", &["figma.exe", "figma"]),
+    ];
+
+    let mut system = System::new();
+    system.refresh_processes(sysinfo::ProcessesToUpdate::All, true);
+
+    let mut apps: HashMap<&str, Vec<u32>> = HashMap::new();
+    for (pid, process) in system.processes() {
+        let name = process.name().to_string_lossy().to_lowercase();
+        for (app_name, patterns) in APP_PATTERNS {
+            if patterns.iter().any(|p| name.contains(p)) {
+                apps.entry(*app_name).or_default().push(pid.as_u32());
+                break;
+            }
+        }
+    }
+
+    if apps.is_empty() {
+        return serde_json::json!({
+            "success": true,
+            "freed_mb": 0.0,
+            "processes": 0,
+            "duration_ms": start.elapsed().as_millis() as u64
+        })
+        .to_string();
+    }
+
+    let mut total_trimmed = 0usize;
+    let mut freed_mb = 0.0f64;
+
+    for (_app_name, pids) in &apps {
+        for pid in pids {
+            match WindowsMemoryOptimizer::trim_process_working_set(*pid) {
+                Ok(bytes_freed) => {
+                    if bytes_freed > 0 {
+                        freed_mb += bytes_freed as f64 / 1024.0 / 1024.0;
+                        total_trimmed += 1;
+                    }
+                }
+                Err(e) => {
+                    tracing::debug!("Failed to trim app process {}: {}", pid, e);
+                }
+            }
+        }
+    }
+
+    serde_json::json!({
+        "success": true,
+        "freed_mb": freed_mb,
+        "processes": total_trimmed,
+        "duration_ms": start.elapsed().as_millis() as u64
+    })
+    .to_string()
 }
