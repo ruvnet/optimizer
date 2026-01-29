@@ -12,6 +12,7 @@
   --mono:'Cascadia Code','Fira Code',Consolas,monospace;
   --radius:10px;
   --transition:0.3s ease;
+  --nav-width:200px;
 }
 
 /* ── Dark Theme (default) ──────────────────────────────────────── */
@@ -30,9 +31,14 @@
   --accent-amber-dim:rgba(212,165,116,0.15);
   --accent-green:#6bcb77;
   --accent-red:#e06060;
+  --accent-purple:#a78bfa;
+  --accent-purple-dim:rgba(167,139,250,0.15);
   --gauge-track:#1a2038;
   --shadow:0 4px 20px rgba(0,0,0,0.4);
   --canvas-bg:#0a0e1a;
+  --nav-bg:#0d1122;
+  --nav-hover:#151b30;
+  --nav-active:#1a2240;
 }
 
 /* ── Light Theme ───────────────────────────────────────────────── */
@@ -51,9 +57,14 @@
   --accent-amber-dim:rgba(184,134,74,0.12);
   --accent-green:#3da64e;
   --accent-red:#c04040;
+  --accent-purple:#7c5cbf;
+  --accent-purple-dim:rgba(124,92,191,0.12);
   --gauge-track:#e8ecf2;
   --shadow:0 4px 20px rgba(0,0,0,0.08);
   --canvas-bg:#e8ecf2;
+  --nav-bg:#f5f7fa;
+  --nav-hover:#ebeef3;
+  --nav-active:#e0e4ec;
 }
 
 body{
@@ -67,9 +78,9 @@ body{
 /* ── Layout ────────────────────────────────────────────────────── */
 #app{
   display:grid;
-  grid-template-columns:300px 1fr;
+  grid-template-columns:var(--nav-width) 1fr;
   grid-template-rows:48px 1fr 44px;
-  grid-template-areas:"header header" "sidebar main" "footer footer";
+  grid-template-areas:"header header" "nav content" "footer footer";
   height:100vh;width:100vw;
 }
 header{
@@ -89,13 +100,98 @@ header h1 b{color:var(--accent-cyan);font-weight:600}
 }
 .theme-btn:hover{background:var(--bg-card-hover);color:var(--text-primary)}
 
-/* ── Sidebar ───────────────────────────────────────────────────── */
-#sidebar{
-  grid-area:sidebar;background:var(--bg-secondary);
+/* ── Navigation Sidebar ───────────────────────────────────────── */
+#nav{
+  grid-area:nav;background:var(--nav-bg);
+  border-right:1px solid var(--border);
+  overflow-y:auto;display:flex;flex-direction:column;
+  padding:8px 0;
+}
+.nav-section{
+  font-size:9px;font-weight:600;letter-spacing:1.5px;
+  text-transform:uppercase;color:var(--text-dim);
+  padding:10px 16px 4px;margin-top:4px;
+}
+.nav-section:first-child{margin-top:0}
+.nav-item{
+  display:flex;align-items:center;gap:10px;
+  padding:8px 16px;font-size:12px;color:var(--text-secondary);
+  cursor:pointer;transition:var(--transition);
+  border-left:3px solid transparent;
+  text-decoration:none;
+}
+.nav-item:hover{
+  background:var(--nav-hover);color:var(--text-primary);
+}
+.nav-item.active{
+  background:var(--nav-active);color:var(--accent-cyan);
+  border-left-color:var(--accent-cyan);font-weight:500;
+}
+.nav-icon{width:18px;text-align:center;font-size:14px;flex-shrink:0}
+.nav-badge{
+  margin-left:auto;font-size:9px;padding:1px 6px;
+  border-radius:8px;background:var(--accent-cyan-dim);
+  color:var(--accent-cyan);font-weight:600;
+}
+
+/* ── Content Area ─────────────────────────────────────────────── */
+#content{
+  grid-area:content;overflow-y:auto;overflow-x:hidden;
+  background:var(--bg-primary);
+}
+.page{display:none;height:100%;width:100%}
+.page.active{display:block}
+/* Dashboard page needs flex for its dual-panel layout */
+.page-dashboard.active{display:grid;grid-template-columns:300px 1fr;height:100%}
+
+/* ── Dashboard Sidebar (existing sidebar content) ─────────────── */
+#dash-sidebar{
+  background:var(--bg-secondary);
   border-right:1px solid var(--border);
   padding:14px;overflow-y:auto;
   display:flex;flex-direction:column;gap:12px;
 }
+
+/* ── Dashboard Main (Three.js) ────────────────────────────────── */
+#dash-main{
+  position:relative;background:var(--canvas-bg);overflow:hidden;
+}
+#world-canvas{width:100%;height:100%;display:block}
+#center-label{
+  position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+  pointer-events:none;text-align:center;z-index:2;
+}
+#center-label .title{
+  font-size:13px;font-weight:700;letter-spacing:3px;
+  text-transform:uppercase;color:var(--accent-cyan);
+  animation:labelPulse 3s ease-in-out infinite;
+  text-shadow:0 0 20px rgba(78,205,196,0.4),0 0 40px rgba(78,205,196,0.15);
+}
+#center-label .sub{
+  font-size:9px;color:var(--text-dim);margin-top:4px;
+  letter-spacing:1.5px;
+  animation:labelFade 4s ease-in-out infinite;
+}
+@keyframes labelPulse{
+  0%,100%{opacity:.7;text-shadow:0 0 20px rgba(78,205,196,0.4),0 0 40px rgba(78,205,196,0.15)}
+  50%{opacity:1;text-shadow:0 0 30px rgba(78,205,196,0.6),0 0 60px rgba(78,205,196,0.3)}
+}
+@keyframes labelFade{
+  0%,100%{opacity:.4}
+  50%{opacity:.7}
+}
+/* Fallback when Three.js unavailable */
+#fallback{
+  display:none;width:100%;height:100%;
+  background:radial-gradient(ellipse at center,var(--bg-card) 0%,var(--bg-primary) 70%);
+}
+#fallback .ring{
+  position:absolute;border:1px solid var(--accent-cyan);border-radius:50%;
+  opacity:.15;top:50%;left:50%;transform:translate(-50%,-50%);
+}
+@keyframes spin{from{transform:translate(-50%,-50%) rotate(0deg)}to{transform:translate(-50%,-50%) rotate(360deg)}}
+
+/* ── Cards ────────────────────────────────────────────────────── */
 .card{
   background:var(--bg-card);border:1px solid var(--border);
   border-radius:var(--radius);padding:14px;transition:var(--transition);
@@ -153,46 +249,6 @@ header h1 b{color:var(--accent-cyan);font-weight:600}
 .proc-row:last-child{border-bottom:none}
 .proc-name{color:var(--text-primary);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .proc-mem{color:var(--accent-amber);font-family:var(--mono);font-size:10px;margin-left:8px}
-
-/* ── Main (Three.js) ──────────────────────────────────────────── */
-#main{
-  grid-area:main;position:relative;
-  background:var(--canvas-bg);overflow:hidden;
-}
-#world-canvas{width:100%;height:100%;display:block}
-#center-label{
-  position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
-  pointer-events:none;text-align:center;z-index:2;
-}
-#center-label .title{
-  font-size:13px;font-weight:700;letter-spacing:3px;
-  text-transform:uppercase;color:var(--accent-cyan);
-  animation:labelPulse 3s ease-in-out infinite;
-  text-shadow:0 0 20px rgba(78,205,196,0.4),0 0 40px rgba(78,205,196,0.15);
-}
-#center-label .sub{
-  font-size:9px;color:var(--text-dim);margin-top:4px;
-  letter-spacing:1.5px;
-  animation:labelFade 4s ease-in-out infinite;
-}
-@keyframes labelPulse{
-  0%,100%{opacity:.7;text-shadow:0 0 20px rgba(78,205,196,0.4),0 0 40px rgba(78,205,196,0.15)}
-  50%{opacity:1;text-shadow:0 0 30px rgba(78,205,196,0.6),0 0 60px rgba(78,205,196,0.3)}
-}
-@keyframes labelFade{
-  0%,100%{opacity:.4}
-  50%{opacity:.7}
-}
-/* Fallback when Three.js unavailable */
-#fallback{
-  display:none;width:100%;height:100%;
-  background:radial-gradient(ellipse at center,var(--bg-card) 0%,var(--bg-primary) 70%);
-}
-#fallback .ring{
-  position:absolute;border:1px solid var(--accent-cyan);border-radius:50%;
-  opacity:.15;top:50%;left:50%;transform:translate(-50%,-50%);
-}
-@keyframes spin{from{transform:translate(-50%,-50%) rotate(0deg)}to{transform:translate(-50%,-50%) rotate(360deg)}}
 
 /* ── Footer (Runtime Loop) ─────────────────────────────────────── */
 footer{
@@ -299,7 +355,7 @@ footer{
 /* ── Version footer ───────────────────────────────────────────── */
 .version-text{font-size:9px;color:var(--text-dim);text-align:center;padding:4px 0}
 
-/* ── Sidebar Sections ──────────────────────────────────────────── */
+/* ── Sidebar Sections (dashboard sidebar) ─────────────────────── */
 .section-label{
   font-size:9px;font-weight:600;letter-spacing:1.5px;
   text-transform:uppercase;color:var(--text-dim);
@@ -314,6 +370,110 @@ footer{
 ::-webkit-scrollbar-track{background:transparent}
 ::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
 ::-webkit-scrollbar-thumb:hover{background:var(--text-dim)}
+
+/* ── Placeholder Page Styles ──────────────────────────────────── */
+.page-inner{
+  padding:24px 28px;max-width:1200px;
+}
+.page-header{
+  display:flex;align-items:center;gap:12px;margin-bottom:6px;
+}
+.page-header .page-icon{font-size:24px}
+.page-header h2{font-size:18px;font-weight:600;color:var(--text-primary)}
+.page-desc{
+  font-size:12px;color:var(--text-secondary);line-height:1.6;
+  margin-bottom:20px;max-width:700px;
+}
+.page-status{
+  display:inline-block;font-size:9px;font-weight:600;
+  letter-spacing:1px;text-transform:uppercase;
+  padding:3px 10px;border-radius:4px;margin-bottom:16px;
+  background:var(--accent-amber-dim);color:var(--accent-amber);
+}
+.page-grid{
+  display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));
+  gap:16px;margin-bottom:20px;
+}
+.ph-card{
+  background:var(--bg-card);border:1px solid var(--border);
+  border-radius:var(--radius);padding:16px;
+}
+.ph-card-title{
+  font-size:11px;font-weight:600;letter-spacing:0.5px;
+  text-transform:uppercase;color:var(--text-dim);margin-bottom:10px;
+}
+.ph-field{
+  display:flex;justify-content:space-between;align-items:center;
+  padding:6px 0;font-size:11px;border-bottom:1px solid var(--border);
+}
+.ph-field:last-child{border-bottom:none}
+.ph-field-label{color:var(--text-secondary)}
+.ph-field-value{
+  font-family:var(--mono);font-size:11px;
+  color:var(--text-dim);font-style:italic;
+}
+.ph-chart{
+  height:120px;background:var(--bg-primary);border:1px dashed var(--border);
+  border-radius:8px;display:flex;align-items:center;justify-content:center;
+  color:var(--text-dim);font-size:11px;margin-top:10px;
+}
+.ph-chart-tall{height:180px}
+.ph-bar-row{
+  display:flex;align-items:center;gap:8px;padding:4px 0;
+}
+.ph-bar-label{font-size:10px;color:var(--text-secondary);width:80px;flex-shrink:0}
+.ph-bar{
+  flex:1;height:8px;background:var(--gauge-track);border-radius:4px;overflow:hidden;
+}
+.ph-bar-fill{
+  height:100%;border-radius:4px;transition:width .6s ease;
+}
+.ph-bar-value{font-size:10px;color:var(--text-dim);width:40px;text-align:right;font-family:var(--mono)}
+.ph-list-item{
+  display:flex;align-items:center;gap:8px;
+  padding:6px 0;font-size:11px;color:var(--text-secondary);
+  border-bottom:1px solid var(--border);
+}
+.ph-list-item:last-child{border-bottom:none}
+.ph-dot{
+  width:6px;height:6px;border-radius:50%;flex-shrink:0;
+}
+.ph-toggle-group{display:flex;flex-direction:column;gap:2px}
+.ph-actions{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
+.ph-btn{
+  padding:7px 14px;border:1px solid var(--border);border-radius:6px;
+  background:var(--bg-card);color:var(--text-secondary);
+  font-size:11px;font-family:var(--font);cursor:not-allowed;opacity:.6;
+}
+.ph-big-number{
+  font-size:36px;font-weight:700;color:var(--accent-cyan);
+  line-height:1;margin-bottom:4px;
+}
+.ph-big-label{
+  font-size:10px;color:var(--text-dim);text-transform:uppercase;
+  letter-spacing:1px;
+}
+.ph-grade{
+  display:inline-flex;align-items:center;justify-content:center;
+  width:56px;height:56px;border-radius:50%;font-size:24px;font-weight:700;
+  background:var(--accent-cyan-dim);color:var(--accent-cyan);
+  border:2px solid var(--accent-cyan);
+}
+.ph-timeline{
+  display:flex;flex-direction:column;gap:0;padding-left:16px;
+  border-left:2px solid var(--border);
+}
+.ph-timeline-item{
+  position:relative;padding:8px 0 8px 16px;font-size:11px;
+  color:var(--text-secondary);
+}
+.ph-timeline-item::before{
+  content:'';position:absolute;left:-21px;top:12px;
+  width:8px;height:8px;border-radius:50%;
+  background:var(--border);border:2px solid var(--bg-card);
+}
+.ph-timeline-item.active::before{background:var(--accent-cyan)}
+.ph-timeline-time{font-size:9px;color:var(--text-dim);font-family:var(--mono)}
 </style>
 </head>
 <body>
@@ -350,137 +510,900 @@ footer{
     </div>
   </header>
 
-  <!-- Sidebar -->
-  <aside id="sidebar">
+  <!-- Navigation Sidebar -->
+  <nav id="nav">
+    <div class="nav-section">Overview</div>
+    <div class="nav-item active" onclick="showPage('dashboard')" data-page="dashboard">
+      <span class="nav-icon">&#9670;</span> Dashboard
+    </div>
 
-    <div class="section-label">System Status</div>
+    <div class="nav-section">Workspace</div>
+    <div class="nav-item" onclick="showPage('profiles')" data-page="profiles">
+      <span class="nav-icon">&#128194;</span> Profiles
+      <span class="nav-badge">013</span>
+    </div>
+    <div class="nav-item" onclick="showPage('health')" data-page="health">
+      <span class="nav-icon">&#128154;</span> Health Score
+      <span class="nav-badge">014</span>
+    </div>
 
-    <!-- Memory Gauge -->
-    <div class="card">
-      <div class="card-title">Memory</div>
-      <div class="gauge-row">
-        <div class="gauge-ring">
-          <svg viewBox="0 0 80 80" width="72" height="72">
-            <circle class="g-track" cx="40" cy="40" r="34"/>
-            <circle class="g-fill" id="gaugeFill" cx="40" cy="40" r="34"
-              stroke-dasharray="213.6" stroke-dashoffset="213.6"/>
-          </svg>
-          <div class="gauge-lbl">
-            <span class="gauge-val" id="gaugeVal">--</span>
-            <span class="gauge-pct">%</span>
+    <div class="nav-section">Boot &amp; Build</div>
+    <div class="nav-item" onclick="showPage('startup')" data-page="startup">
+      <span class="nav-icon">&#9889;</span> Startup
+      <span class="nav-badge">015</span>
+    </div>
+    <div class="nav-item" onclick="showPage('wsl2')" data-page="wsl2">
+      <span class="nav-icon">&#128039;</span> WSL2 Governor
+      <span class="nav-badge">016</span>
+    </div>
+    <div class="nav-item" onclick="showPage('build')" data-page="build">
+      <span class="nav-icon">&#128736;</span> Build Optimizer
+      <span class="nav-badge">017</span>
+    </div>
+
+    <div class="nav-section">Analysis</div>
+    <div class="nav-item" onclick="showPage('leaks')" data-page="leaks">
+      <span class="nav-icon">&#128270;</span> Leak Detector
+      <span class="nav-badge">018</span>
+    </div>
+    <div class="nav-item" onclick="showPage('prefetch')" data-page="prefetch">
+      <span class="nav-icon">&#128640;</span> Prefetcher
+      <span class="nav-badge">019</span>
+    </div>
+    <div class="nav-item" onclick="showPage('thermal')" data-page="thermal">
+      <span class="nav-icon">&#127777;</span> Thermal
+      <span class="nav-badge">020</span>
+    </div>
+
+    <div class="nav-section">Extensions</div>
+    <div class="nav-item" onclick="showPage('plugins')" data-page="plugins">
+      <span class="nav-icon">&#129520;</span> Plugins
+      <span class="nav-badge">021</span>
+    </div>
+    <div class="nav-item" onclick="showPage('gpu')" data-page="gpu">
+      <span class="nav-icon">&#127918;</span> GPU Memory
+      <span class="nav-badge">022</span>
+    </div>
+
+    <div class="nav-section">Maintenance</div>
+    <div class="nav-item" onclick="showPage('bloatware')" data-page="bloatware">
+      <span class="nav-icon">&#128683;</span> Bloatware
+      <span class="nav-badge">023</span>
+    </div>
+    <div class="nav-item" onclick="showPage('timeline')" data-page="timeline">
+      <span class="nav-icon">&#9203;</span> Timeline
+      <span class="nav-badge">024</span>
+    </div>
+    <div class="nav-item" onclick="showPage('agent')" data-page="agent">
+      <span class="nav-icon">&#129302;</span> Agent
+      <span class="nav-badge">025</span>
+    </div>
+  </nav>
+
+  <!-- Content Area -->
+  <div id="content">
+
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <!-- PAGE: Dashboard (original sidebar + Three.js)              -->
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <div class="page page-dashboard active" id="page-dashboard">
+      <div id="dash-sidebar">
+
+        <div class="section-label">System Status</div>
+
+        <!-- Memory Gauge -->
+        <div class="card">
+          <div class="card-title">Memory</div>
+          <div class="gauge-row">
+            <div class="gauge-ring">
+              <svg viewBox="0 0 80 80" width="72" height="72">
+                <circle class="g-track" cx="40" cy="40" r="34"/>
+                <circle class="g-fill" id="gaugeFill" cx="40" cy="40" r="34"
+                  stroke-dasharray="213.6" stroke-dashoffset="213.6"/>
+              </svg>
+              <div class="gauge-lbl">
+                <span class="gauge-val" id="gaugeVal">--</span>
+                <span class="gauge-pct">%</span>
+              </div>
+            </div>
+            <div class="gauge-stats">
+              <div class="st">Used: <strong id="usedMb">--</strong> GB</div>
+              <div class="st">Total: <strong id="totalMb">--</strong> GB</div>
+              <div class="st">Free: <strong id="freeMb">--</strong> GB</div>
+            </div>
           </div>
         </div>
-        <div class="gauge-stats">
-          <div class="st">Used: <strong id="usedMb">--</strong> GB</div>
-          <div class="st">Total: <strong id="totalMb">--</strong> GB</div>
-          <div class="st">Free: <strong id="freeMb">--</strong> GB</div>
+
+        <!-- CPU Info -->
+        <div class="card">
+          <div class="card-title">Processor</div>
+          <div class="cpu-model" id="cpuModel">--</div>
+          <div class="chips" id="cpuChips"></div>
+        </div>
+
+        <div class="section-label">Actions</div>
+
+        <!-- Actions -->
+        <div class="card">
+          <div class="card-title">Quick Actions</div>
+          <div class="actions">
+            <button class="btn" id="btnOptimize" onclick="doOptimize(false)">
+              <span class="ico">&#9889;</span> Optimize Now
+            </button>
+            <button class="btn" id="btnDeep" onclick="doOptimize(true)">
+              <span class="ico">&#128295;</span> Deep Clean
+            </button>
+            <button class="btn" id="btnApps" onclick="doOptimizeApps()">
+              <span class="ico">&#127760;</span> Optimize Apps
+            </button>
+            <button class="btn" onclick="requestProcesses()">
+              <span class="ico">&#128202;</span> Refresh Processes
+            </button>
+          </div>
+        </div>
+
+        <div class="section-label">Configuration</div>
+
+        <!-- Settings -->
+        <div class="card">
+          <div class="card-title">Settings</div>
+          <div class="toggle-row">
+            <span>Auto-Optimize</span>
+            <div class="toggle" id="togAutoOpt" onclick="toggleSetting('auto_optimize')"></div>
+          </div>
+          <div class="select-row" style="padding:5px 0;border-top:1px solid var(--border)">
+            <span style="font-size:11px;color:var(--text-secondary)">Threshold</span>
+            <select id="selThreshold" onchange="setSetting('threshold',parseInt(this.value))">
+              <option value="75">75%</option>
+              <option value="80">80%</option>
+              <option value="85">85%</option>
+              <option value="90">90%</option>
+            </select>
+          </div>
+          <div class="select-row" style="padding:5px 0;border-top:1px solid var(--border)">
+            <span style="font-size:11px;color:var(--text-secondary)">Interval</span>
+            <select id="selInterval" onchange="setSetting('interval_secs',parseInt(this.value))">
+              <option value="30">30s</option>
+              <option value="60">60s</option>
+              <option value="120">2 min</option>
+              <option value="300">5 min</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- AI Mode -->
+        <div class="card">
+          <div class="card-title">AI Mode</div>
+          <div class="toggle-row">
+            <span>Game Mode</span>
+            <div class="toggle" id="togGameMode" onclick="toggleSetting('ai_game_mode')"></div>
+          </div>
+          <div class="toggle-row">
+            <span>Focus Mode</span>
+            <div class="toggle" id="togFocusMode" onclick="toggleSetting('ai_focus_mode')"></div>
+          </div>
+          <div class="toggle-row">
+            <span>Thermal Prediction</span>
+            <div class="toggle" id="togThermal" onclick="toggleSetting('ai_thermal')"></div>
+          </div>
+          <div class="toggle-row">
+            <span>Predictive Preload</span>
+            <div class="toggle" id="togPreload" onclick="toggleSetting('ai_preload')"></div>
+          </div>
+        </div>
+
+        <div class="section-label">Monitoring</div>
+
+        <!-- Top Processes -->
+        <div class="card">
+          <div class="card-title">Top Processes</div>
+          <div class="proc-list" id="procList">
+            <div style="font-size:11px;color:var(--text-dim)">Loading...</div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Three.js World Model -->
+      <div id="dash-main">
+        <canvas id="world-canvas"></canvas>
+        <div id="center-label">
+          <div class="title" id="centerTitle">RuVector OS Optimizer</div>
+          <div class="sub" id="centerSub">memory &middot; neural &middot; optimize &middot; protect</div>
+        </div>
+        <div id="fallback">
+          <div class="ring" style="width:120px;height:120px;animation:spin 20s linear infinite"></div>
+          <div class="ring" style="width:220px;height:220px;animation:spin 30s linear infinite reverse"></div>
+          <div class="ring" style="width:340px;height:340px;animation:spin 45s linear infinite"></div>
         </div>
       </div>
     </div>
 
-    <!-- CPU Info -->
-    <div class="card">
-      <div class="card-title">Processor</div>
-      <div class="cpu-model" id="cpuModel">--</div>
-      <div class="chips" id="cpuChips"></div>
-    </div>
-
-    <div class="section-label">Actions</div>
-
-    <!-- Actions -->
-    <div class="card">
-      <div class="card-title">Quick Actions</div>
-      <div class="actions">
-        <button class="btn" id="btnOptimize" onclick="doOptimize(false)">
-          <span class="ico">&#9889;</span> Optimize Now
-        </button>
-        <button class="btn" id="btnDeep" onclick="doOptimize(true)">
-          <span class="ico">&#128295;</span> Deep Clean
-        </button>
-        <button class="btn" id="btnApps" onclick="doOptimizeApps()">
-          <span class="ico">&#127760;</span> Optimize Apps
-        </button>
-        <button class="btn" onclick="requestProcesses()">
-          <span class="ico">&#128202;</span> Refresh Processes
-        </button>
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <!-- PAGE: ADR-013 Workspace Profiles                           -->
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <div class="page" id="page-profiles">
+      <div class="page-inner">
+        <div class="page-header">
+          <span class="page-icon">&#128194;</span>
+          <h2>Workspace Profiles</h2>
+        </div>
+        <div class="page-status">ADR-013 &middot; Placeholder</div>
+        <p class="page-desc">
+          Context-aware memory optimization profiles that auto-detect your
+          workload (development, gaming, creative, office) and apply tuned
+          memory strategies. Switch profiles manually or let the AI engine
+          detect and apply them automatically.
+        </p>
+        <div class="page-grid">
+          <div class="ph-card">
+            <div class="ph-card-title">Active Profile</div>
+            <div class="ph-big-number">DEV</div>
+            <div class="ph-big-label">Development Profile</div>
+            <div class="ph-chart">Profile switching timeline</div>
+          </div>
+          <div class="ph-card">
+            <div class="ph-card-title">Available Profiles</div>
+            <div class="ph-list-item"><span class="ph-dot" style="background:var(--accent-cyan)"></span> Development</div>
+            <div class="ph-list-item"><span class="ph-dot" style="background:var(--accent-green)"></span> Gaming</div>
+            <div class="ph-list-item"><span class="ph-dot" style="background:var(--accent-amber)"></span> Creative (Photoshop/Video)</div>
+            <div class="ph-list-item"><span class="ph-dot" style="background:var(--accent-purple)"></span> Office / Browsing</div>
+            <div class="ph-list-item"><span class="ph-dot" style="background:var(--accent-red)"></span> Server / Headless</div>
+          </div>
+          <div class="ph-card">
+            <div class="ph-card-title">Profile Settings</div>
+            <div class="ph-field"><span class="ph-field-label">Auto-Detect</span><span class="ph-field-value">-- enabled --</span></div>
+            <div class="ph-field"><span class="ph-field-label">Detection Method</span><span class="ph-field-value">-- foreground app --</span></div>
+            <div class="ph-field"><span class="ph-field-label">Switch Delay</span><span class="ph-field-value">-- 5s --</span></div>
+            <div class="ph-field"><span class="ph-field-label">Hotkey</span><span class="ph-field-value">-- Ctrl+Shift+P --</span></div>
+          </div>
+          <div class="ph-card">
+            <div class="ph-card-title">Memory Allocation</div>
+            <div class="ph-bar-row">
+              <span class="ph-bar-label">IDE/Editor</span>
+              <div class="ph-bar"><div class="ph-bar-fill" style="width:60%;background:var(--accent-cyan)"></div></div>
+              <span class="ph-bar-value">60%</span>
+            </div>
+            <div class="ph-bar-row">
+              <span class="ph-bar-label">Build Tools</span>
+              <div class="ph-bar"><div class="ph-bar-fill" style="width:25%;background:var(--accent-amber)"></div></div>
+              <span class="ph-bar-value">25%</span>
+            </div>
+            <div class="ph-bar-row">
+              <span class="ph-bar-label">Browser</span>
+              <div class="ph-bar"><div class="ph-bar-fill" style="width:10%;background:var(--accent-green)"></div></div>
+              <span class="ph-bar-value">10%</span>
+            </div>
+            <div class="ph-bar-row">
+              <span class="ph-bar-label">System</span>
+              <div class="ph-bar"><div class="ph-bar-fill" style="width:5%;background:var(--text-dim)"></div></div>
+              <span class="ph-bar-value">5%</span>
+            </div>
+          </div>
+        </div>
+        <div class="ph-actions">
+          <button class="ph-btn">Create Custom Profile</button>
+          <button class="ph-btn">Import Profile</button>
+          <button class="ph-btn">Export Current</button>
+        </div>
       </div>
     </div>
 
-    <div class="section-label">Configuration</div>
-
-    <!-- Settings -->
-    <div class="card">
-      <div class="card-title">Settings</div>
-      <div class="toggle-row">
-        <span>Auto-Optimize</span>
-        <div class="toggle" id="togAutoOpt" onclick="toggleSetting('auto_optimize')"></div>
-      </div>
-      <div class="select-row" style="padding:5px 0;border-top:1px solid var(--border)">
-        <span style="font-size:11px;color:var(--text-secondary)">Threshold</span>
-        <select id="selThreshold" onchange="setSetting('threshold',parseInt(this.value))">
-          <option value="75">75%</option>
-          <option value="80">80%</option>
-          <option value="85">85%</option>
-          <option value="90">90%</option>
-        </select>
-      </div>
-      <div class="select-row" style="padding:5px 0;border-top:1px solid var(--border)">
-        <span style="font-size:11px;color:var(--text-secondary)">Interval</span>
-        <select id="selInterval" onchange="setSetting('interval_secs',parseInt(this.value))">
-          <option value="30">30s</option>
-          <option value="60">60s</option>
-          <option value="120">2 min</option>
-          <option value="300">5 min</option>
-        </select>
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <!-- PAGE: ADR-014 System Health Score                          -->
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <div class="page" id="page-health">
+      <div class="page-inner">
+        <div class="page-header">
+          <span class="page-icon">&#128154;</span>
+          <h2>System Health Score</h2>
+        </div>
+        <div class="page-status">ADR-014 &middot; Placeholder</div>
+        <p class="page-desc">
+          A composite health score across 8 dimensions: memory pressure,
+          fragmentation, page faults, working set efficiency, swap usage,
+          cache hit ratio, thermal state, and process stability. Grades
+          from A+ to F with actionable recommendations.
+        </p>
+        <div class="page-grid">
+          <div class="ph-card" style="text-align:center">
+            <div class="ph-card-title">Overall Grade</div>
+            <div class="ph-grade">B+</div>
+            <div style="margin-top:8px;font-size:11px;color:var(--text-secondary)">Score: 82 / 100</div>
+          </div>
+          <div class="ph-card">
+            <div class="ph-card-title">Health Dimensions</div>
+            <div class="ph-bar-row">
+              <span class="ph-bar-label">Memory</span>
+              <div class="ph-bar"><div class="ph-bar-fill" style="width:85%;background:var(--accent-green)"></div></div>
+              <span class="ph-bar-value">85</span>
+            </div>
+            <div class="ph-bar-row">
+              <span class="ph-bar-label">Fragment.</span>
+              <div class="ph-bar"><div class="ph-bar-fill" style="width:70%;background:var(--accent-amber)"></div></div>
+              <span class="ph-bar-value">70</span>
+            </div>
+            <div class="ph-bar-row">
+              <span class="ph-bar-label">Page Faults</span>
+              <div class="ph-bar"><div class="ph-bar-fill" style="width:92%;background:var(--accent-green)"></div></div>
+              <span class="ph-bar-value">92</span>
+            </div>
+            <div class="ph-bar-row">
+              <span class="ph-bar-label">Working Set</span>
+              <div class="ph-bar"><div class="ph-bar-fill" style="width:78%;background:var(--accent-cyan)"></div></div>
+              <span class="ph-bar-value">78</span>
+            </div>
+            <div class="ph-bar-row">
+              <span class="ph-bar-label">Swap</span>
+              <div class="ph-bar"><div class="ph-bar-fill" style="width:88%;background:var(--accent-green)"></div></div>
+              <span class="ph-bar-value">88</span>
+            </div>
+            <div class="ph-bar-row">
+              <span class="ph-bar-label">Cache Ratio</span>
+              <div class="ph-bar"><div class="ph-bar-fill" style="width:65%;background:var(--accent-amber)"></div></div>
+              <span class="ph-bar-value">65</span>
+            </div>
+            <div class="ph-bar-row">
+              <span class="ph-bar-label">Thermal</span>
+              <div class="ph-bar"><div class="ph-bar-fill" style="width:95%;background:var(--accent-green)"></div></div>
+              <span class="ph-bar-value">95</span>
+            </div>
+            <div class="ph-bar-row">
+              <span class="ph-bar-label">Stability</span>
+              <div class="ph-bar"><div class="ph-bar-fill" style="width:80%;background:var(--accent-cyan)"></div></div>
+              <span class="ph-bar-value">80</span>
+            </div>
+          </div>
+          <div class="ph-card">
+            <div class="ph-card-title">Score History (24h)</div>
+            <div class="ph-chart ph-chart-tall">Score trend chart placeholder</div>
+          </div>
+          <div class="ph-card">
+            <div class="ph-card-title">Recommendations</div>
+            <div class="ph-list-item"><span class="ph-dot" style="background:var(--accent-amber)"></span> Defragment memory to improve fragmentation score</div>
+            <div class="ph-list-item"><span class="ph-dot" style="background:var(--accent-amber)"></span> Reduce browser tab count to improve cache ratio</div>
+            <div class="ph-list-item"><span class="ph-dot" style="background:var(--accent-green)"></span> Thermal state is excellent</div>
+          </div>
+        </div>
       </div>
     </div>
 
-    <!-- AI Mode -->
-    <div class="card">
-      <div class="card-title">AI Mode</div>
-      <div class="toggle-row">
-        <span>Game Mode</span>
-        <div class="toggle" id="togGameMode" onclick="toggleSetting('ai_game_mode')"></div>
-      </div>
-      <div class="toggle-row">
-        <span>Focus Mode</span>
-        <div class="toggle" id="togFocusMode" onclick="toggleSetting('ai_focus_mode')"></div>
-      </div>
-      <div class="toggle-row">
-        <span>Thermal Prediction</span>
-        <div class="toggle" id="togThermal" onclick="toggleSetting('ai_thermal')"></div>
-      </div>
-      <div class="toggle-row">
-        <span>Predictive Preload</span>
-        <div class="toggle" id="togPreload" onclick="toggleSetting('ai_preload')"></div>
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <!-- PAGE: ADR-015 Startup Optimizer                            -->
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <div class="page" id="page-startup">
+      <div class="page-inner">
+        <div class="page-header">
+          <span class="page-icon">&#9889;</span>
+          <h2>Startup Optimizer</h2>
+        </div>
+        <div class="page-status">ADR-015 &middot; Placeholder</div>
+        <p class="page-desc">
+          PageRank-based startup impact scoring. Analyzes boot-time
+          programs, ranks them by dependency chains and resource cost,
+          and applies staggered boot tiers to minimize login-to-ready time.
+        </p>
+        <div class="page-grid">
+          <div class="ph-card">
+            <div class="ph-card-title">Boot Time</div>
+            <div class="ph-big-number">--s</div>
+            <div class="ph-big-label">Login-to-Ready</div>
+            <div class="ph-chart">Boot time trend graph</div>
+          </div>
+          <div class="ph-card">
+            <div class="ph-card-title">Startup Programs</div>
+            <div class="ph-field"><span class="ph-field-label">Total Items</span><span class="ph-field-value">-- --</span></div>
+            <div class="ph-field"><span class="ph-field-label">Deferred</span><span class="ph-field-value">-- --</span></div>
+            <div class="ph-field"><span class="ph-field-label">Disabled</span><span class="ph-field-value">-- --</span></div>
+            <div class="ph-field"><span class="ph-field-label">Critical Path</span><span class="ph-field-value">-- --</span></div>
+          </div>
+          <div class="ph-card">
+            <div class="ph-card-title">Boot Tiers</div>
+            <div class="ph-list-item"><span class="ph-dot" style="background:var(--accent-red)"></span> Tier 0 - Immediate (critical drivers)</div>
+            <div class="ph-list-item"><span class="ph-dot" style="background:var(--accent-amber)"></span> Tier 1 - Early (security, auth)</div>
+            <div class="ph-list-item"><span class="ph-dot" style="background:var(--accent-cyan)"></span> Tier 2 - Normal (user apps)</div>
+            <div class="ph-list-item"><span class="ph-dot" style="background:var(--accent-green)"></span> Tier 3 - Lazy (background services)</div>
+          </div>
+          <div class="ph-card">
+            <div class="ph-card-title">PageRank Scores</div>
+            <div class="ph-chart ph-chart-tall">Startup dependency graph visualization</div>
+          </div>
+        </div>
+        <div class="ph-actions">
+          <button class="ph-btn">Analyze Boot</button>
+          <button class="ph-btn">Apply Recommendations</button>
+          <button class="ph-btn">Reset to Default</button>
+        </div>
       </div>
     </div>
 
-    <div class="section-label">Monitoring</div>
-
-    <!-- Top Processes -->
-    <div class="card">
-      <div class="card-title">Top Processes</div>
-      <div class="proc-list" id="procList">
-        <div style="font-size:11px;color:var(--text-dim)">Loading...</div>
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <!-- PAGE: ADR-016 WSL2 Memory Governor                         -->
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <div class="page" id="page-wsl2">
+      <div class="page-inner">
+        <div class="page-header">
+          <span class="page-icon">&#128039;</span>
+          <h2>WSL2 Memory Governor</h2>
+        </div>
+        <div class="page-status">ADR-016 &middot; Placeholder</div>
+        <p class="page-desc">
+          Bridges Windows and Linux memory subsystems via /proc/meminfo
+          monitoring. Applies governor policies to prevent WSL2 from
+          consuming all host memory, with Docker container awareness.
+        </p>
+        <div class="page-grid">
+          <div class="ph-card">
+            <div class="ph-card-title">WSL2 Status</div>
+            <div class="ph-field"><span class="ph-field-label">WSL Detected</span><span class="ph-field-value">-- checking --</span></div>
+            <div class="ph-field"><span class="ph-field-label">Distro</span><span class="ph-field-value">-- --</span></div>
+            <div class="ph-field"><span class="ph-field-label">Kernel Version</span><span class="ph-field-value">-- --</span></div>
+            <div class="ph-field"><span class="ph-field-label">VM Memory</span><span class="ph-field-value">-- GB</span></div>
+          </div>
+          <div class="ph-card">
+            <div class="ph-card-title">Memory Split (Host vs WSL2)</div>
+            <div class="ph-chart">Stacked area chart: Host vs WSL2 memory over time</div>
+          </div>
+          <div class="ph-card">
+            <div class="ph-card-title">Governor Policy</div>
+            <div class="ph-field"><span class="ph-field-label">Active Policy</span><span class="ph-field-value">-- balanced --</span></div>
+            <div class="ph-field"><span class="ph-field-label">Max WSL2 Memory</span><span class="ph-field-value">-- 50% --</span></div>
+            <div class="ph-field"><span class="ph-field-label">Reclaim Threshold</span><span class="ph-field-value">-- 80% --</span></div>
+            <div class="ph-field"><span class="ph-field-label">Docker Awareness</span><span class="ph-field-value">-- enabled --</span></div>
+          </div>
+          <div class="ph-card">
+            <div class="ph-card-title">Docker Containers</div>
+            <div class="ph-chart">Container memory usage bars</div>
+          </div>
+        </div>
       </div>
     </div>
 
-  </aside>
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <!-- PAGE: ADR-017 Build Environment Optimizer                  -->
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <div class="page" id="page-build">
+      <div class="page-inner">
+        <div class="page-header">
+          <span class="page-icon">&#128736;</span>
+          <h2>Build Environment Optimizer</h2>
+        </div>
+        <div class="page-status">ADR-017 &middot; Placeholder</div>
+        <p class="page-desc">
+          Detects active build processes (cargo, npm, webpack, MSBuild,
+          cmake) and applies memory boost actions: priority elevation,
+          working set expansion, and optional RAM disk for temp/output.
+        </p>
+        <div class="page-grid">
+          <div class="ph-card">
+            <div class="ph-card-title">Build Detection</div>
+            <div class="ph-field"><span class="ph-field-label">Active Build</span><span class="ph-field-value">-- none --</span></div>
+            <div class="ph-field"><span class="ph-field-label">Build System</span><span class="ph-field-value">-- --</span></div>
+            <div class="ph-field"><span class="ph-field-label">Parallelism</span><span class="ph-field-value">-- threads --</span></div>
+            <div class="ph-field"><span class="ph-field-label">Est. Memory</span><span class="ph-field-value">-- MB --</span></div>
+          </div>
+          <div class="ph-card">
+            <div class="ph-card-title">Supported Build Systems</div>
+            <div class="ph-list-item"><span class="ph-dot" style="background:var(--accent-amber)"></span> Cargo (Rust)</div>
+            <div class="ph-list-item"><span class="ph-dot" style="background:var(--accent-green)"></span> npm / Webpack / Vite</div>
+            <div class="ph-list-item"><span class="ph-dot" style="background:var(--accent-cyan)"></span> MSBuild / Visual Studio</div>
+            <div class="ph-list-item"><span class="ph-dot" style="background:var(--accent-purple)"></span> CMake / Make</div>
+            <div class="ph-list-item"><span class="ph-dot" style="background:var(--accent-red)"></span> Gradle / Maven</div>
+          </div>
+          <div class="ph-card">
+            <div class="ph-card-title">Boost Actions</div>
+            <div class="toggle-row"><span>Priority Elevation</span><span class="ph-field-value">-- --</span></div>
+            <div class="toggle-row"><span>Working Set Lock</span><span class="ph-field-value">-- --</span></div>
+            <div class="toggle-row"><span>RAM Disk for /tmp</span><span class="ph-field-value">-- --</span></div>
+            <div class="toggle-row"><span>Background App Throttle</span><span class="ph-field-value">-- --</span></div>
+          </div>
+          <div class="ph-card">
+            <div class="ph-card-title">Build Time History</div>
+            <div class="ph-chart ph-chart-tall">Build duration comparison chart</div>
+          </div>
+        </div>
+      </div>
+    </div>
 
-  <!-- Main: Three.js World Model -->
-  <section id="main">
-    <canvas id="world-canvas"></canvas>
-    <div id="center-label">
-      <div class="title" id="centerTitle">RuVector OS Optimizer</div>
-      <div class="sub" id="centerSub">memory &middot; neural &middot; optimize &middot; protect</div>
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <!-- PAGE: ADR-018 Spectral Leak Detector                       -->
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <div class="page" id="page-leaks">
+      <div class="page-inner">
+        <div class="page-header">
+          <span class="page-icon">&#128270;</span>
+          <h2>Spectral Leak Detector</h2>
+        </div>
+        <div class="page-status">ADR-018 &middot; Placeholder</div>
+        <p class="page-desc">
+          Time-series analysis with spectral decomposition to detect
+          slow memory leaks. Uses sliding windows, trend extraction,
+          and confidence scoring to identify processes with monotonic
+          growth patterns before they become critical.
+        </p>
+        <div class="page-grid">
+          <div class="ph-card">
+            <div class="ph-card-title">Leak Suspects</div>
+            <div class="ph-field"><span class="ph-field-label">Active Suspects</span><span class="ph-field-value">-- 0 --</span></div>
+            <div class="ph-field"><span class="ph-field-label">Monitoring</span><span class="ph-field-value">-- processes --</span></div>
+            <div class="ph-field"><span class="ph-field-label">Window Size</span><span class="ph-field-value">-- 30 min --</span></div>
+            <div class="ph-field"><span class="ph-field-label">Confidence Threshold</span><span class="ph-field-value">-- 0.85 --</span></div>
+          </div>
+          <div class="ph-card">
+            <div class="ph-card-title">Memory Growth Trend</div>
+            <div class="ph-chart ph-chart-tall">Time series with spectral decomposition overlay</div>
+          </div>
+          <div class="ph-card">
+            <div class="ph-card-title">Spectral Analysis</div>
+            <div class="ph-chart">Frequency domain chart (FFT)</div>
+          </div>
+          <div class="ph-card">
+            <div class="ph-card-title">Detection History</div>
+            <div class="ph-list-item"><span class="ph-dot" style="background:var(--text-dim)"></span> No leaks detected yet</div>
+          </div>
+        </div>
+        <div class="ph-actions">
+          <button class="ph-btn">Start Deep Scan</button>
+          <button class="ph-btn">Configure Thresholds</button>
+        </div>
+      </div>
     </div>
-    <div id="fallback">
-      <div class="ring" style="width:120px;height:120px;animation:spin 20s linear infinite"></div>
-      <div class="ring" style="width:220px;height:220px;animation:spin 30s linear infinite reverse"></div>
-      <div class="ring" style="width:340px;height:340px;animation:spin 45s linear infinite"></div>
+
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <!-- PAGE: ADR-019 Predictive Prefetcher                        -->
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <div class="page" id="page-prefetch">
+      <div class="page-inner">
+        <div class="page-header">
+          <span class="page-icon">&#128640;</span>
+          <h2>Predictive Prefetcher</h2>
+        </div>
+        <div class="page-status">ADR-019 &middot; Placeholder</div>
+        <p class="page-desc">
+          Markov-chain based application launch prediction. Learns your
+          usage patterns with temporal weights and prefetches application
+          data before you need it, reducing perceived launch times.
+        </p>
+        <div class="page-grid">
+          <div class="ph-card">
+            <div class="ph-card-title">Prediction Accuracy</div>
+            <div class="ph-big-number">--%</div>
+            <div class="ph-big-label">Hit Rate</div>
+            <div class="ph-chart">Accuracy over time</div>
+          </div>
+          <div class="ph-card">
+            <div class="ph-card-title">Predicted Next Apps</div>
+            <div class="ph-list-item"><span class="ph-dot" style="background:var(--accent-cyan)"></span> -- waiting for data --</div>
+          </div>
+          <div class="ph-card">
+            <div class="ph-card-title">Markov Chain State</div>
+            <div class="ph-field"><span class="ph-field-label">States Learned</span><span class="ph-field-value">-- 0 --</span></div>
+            <div class="ph-field"><span class="ph-field-label">Transitions</span><span class="ph-field-value">-- 0 --</span></div>
+            <div class="ph-field"><span class="ph-field-label">Time Decay</span><span class="ph-field-value">-- 0.95 --</span></div>
+            <div class="ph-field"><span class="ph-field-label">Prefetch Strategy</span><span class="ph-field-value">-- conservative --</span></div>
+          </div>
+          <div class="ph-card">
+            <div class="ph-card-title">Launch Time Savings</div>
+            <div class="ph-chart ph-chart-tall">Before/after launch time comparison</div>
+          </div>
+        </div>
+      </div>
     </div>
-  </section>
+
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <!-- PAGE: ADR-020 Thermal-Aware Scheduler                      -->
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <div class="page" id="page-thermal">
+      <div class="page-inner">
+        <div class="page-header">
+          <span class="page-icon">&#127777;</span>
+          <h2>Thermal-Aware Scheduler</h2>
+        </div>
+        <div class="page-status">ADR-020 &middot; Placeholder</div>
+        <p class="page-desc">
+          Monitors CPU thermal zones and adjusts memory operations to
+          avoid thermal throttling. Implements core migration strategies
+          and a Silent Mode that trades performance for quiet operation.
+        </p>
+        <div class="page-grid">
+          <div class="ph-card">
+            <div class="ph-card-title">Thermal Status</div>
+            <div class="ph-field"><span class="ph-field-label">CPU Package</span><span class="ph-field-value">-- &deg;C</span></div>
+            <div class="ph-field"><span class="ph-field-label">Hottest Core</span><span class="ph-field-value">-- &deg;C</span></div>
+            <div class="ph-field"><span class="ph-field-label">Throttle State</span><span class="ph-field-value">-- none --</span></div>
+            <div class="ph-field"><span class="ph-field-label">Fan Speed</span><span class="ph-field-value">-- RPM</span></div>
+          </div>
+          <div class="ph-card">
+            <div class="ph-card-title">Temperature History</div>
+            <div class="ph-chart ph-chart-tall">Per-core temperature heatmap over time</div>
+          </div>
+          <div class="ph-card">
+            <div class="ph-card-title">Thermal Zones</div>
+            <div class="ph-bar-row">
+              <span class="ph-bar-label">Green</span>
+              <div class="ph-bar"><div class="ph-bar-fill" style="width:100%;background:var(--accent-green)"></div></div>
+              <span class="ph-bar-value">&lt;70&deg;</span>
+            </div>
+            <div class="ph-bar-row">
+              <span class="ph-bar-label">Yellow</span>
+              <div class="ph-bar"><div class="ph-bar-fill" style="width:0%;background:var(--accent-amber)"></div></div>
+              <span class="ph-bar-value">70-85&deg;</span>
+            </div>
+            <div class="ph-bar-row">
+              <span class="ph-bar-label">Red</span>
+              <div class="ph-bar"><div class="ph-bar-fill" style="width:0%;background:var(--accent-red)"></div></div>
+              <span class="ph-bar-value">&gt;85&deg;</span>
+            </div>
+          </div>
+          <div class="ph-card">
+            <div class="ph-card-title">Scheduler Config</div>
+            <div class="toggle-row"><span>Silent Mode</span><span class="ph-field-value">-- off --</span></div>
+            <div class="toggle-row"><span>Core Migration</span><span class="ph-field-value">-- auto --</span></div>
+            <div class="toggle-row"><span>Thermal Prediction</span><span class="ph-field-value">-- enabled --</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <!-- PAGE: ADR-021 WASM Plugin Marketplace                      -->
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <div class="page" id="page-plugins">
+      <div class="page-inner">
+        <div class="page-header">
+          <span class="page-icon">&#129520;</span>
+          <h2>WASM Plugin Marketplace</h2>
+        </div>
+        <div class="page-status">ADR-021 &middot; Placeholder</div>
+        <p class="page-desc">
+          Extend RuVector with sandboxed WASM plugins. Browse, install,
+          and manage plugins from a curated marketplace. Plugins run in
+          Wasmer 4.3 with capability-based security and Ed25519 signing.
+        </p>
+        <div class="page-grid">
+          <div class="ph-card">
+            <div class="ph-card-title">Installed Plugins</div>
+            <div class="ph-field"><span class="ph-field-label">Active</span><span class="ph-field-value">-- 0 --</span></div>
+            <div class="ph-field"><span class="ph-field-label">Available</span><span class="ph-field-value">-- -- --</span></div>
+            <div class="ph-field"><span class="ph-field-label">Updates</span><span class="ph-field-value">-- 0 --</span></div>
+          </div>
+          <div class="ph-card">
+            <div class="ph-card-title">Featured Plugins</div>
+            <div class="ph-list-item"><span class="ph-dot" style="background:var(--accent-cyan)"></span> Chrome Tab Optimizer</div>
+            <div class="ph-list-item"><span class="ph-dot" style="background:var(--accent-green)"></span> Game Memory Booster</div>
+            <div class="ph-list-item"><span class="ph-dot" style="background:var(--accent-amber)"></span> Docker Memory Limiter</div>
+            <div class="ph-list-item"><span class="ph-dot" style="background:var(--accent-purple)"></span> RAM Disk Manager</div>
+          </div>
+          <div class="ph-card">
+            <div class="ph-card-title">Plugin Security</div>
+            <div class="ph-field"><span class="ph-field-label">Sandbox</span><span class="ph-field-value">-- Wasmer 4.3 --</span></div>
+            <div class="ph-field"><span class="ph-field-label">Signing</span><span class="ph-field-value">-- Ed25519 --</span></div>
+            <div class="ph-field"><span class="ph-field-label">Capabilities</span><span class="ph-field-value">-- restricted --</span></div>
+          </div>
+          <div class="ph-card">
+            <div class="ph-card-title">Plugin Categories</div>
+            <div class="ph-chart">Category distribution pie chart</div>
+          </div>
+        </div>
+        <div class="ph-actions">
+          <button class="ph-btn">Browse Marketplace</button>
+          <button class="ph-btn">Upload Plugin</button>
+          <button class="ph-btn">Check Updates</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <!-- PAGE: ADR-022 GPU Memory Optimizer                         -->
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <div class="page" id="page-gpu">
+      <div class="page-inner">
+        <div class="page-header">
+          <span class="page-icon">&#127918;</span>
+          <h2>GPU Memory Optimizer</h2>
+        </div>
+        <div class="page-status">ADR-022 &middot; Placeholder</div>
+        <p class="page-desc">
+          Monitors and optimizes GPU/VRAM via NVML (NVIDIA) and DXGI
+          (all GPUs). Categorizes VRAM usage, enables AI model layer
+          offloading between system RAM and VRAM for ML workloads.
+        </p>
+        <div class="page-grid">
+          <div class="ph-card">
+            <div class="ph-card-title">GPU Status</div>
+            <div class="ph-field"><span class="ph-field-label">GPU Model</span><span class="ph-field-value">-- detecting --</span></div>
+            <div class="ph-field"><span class="ph-field-label">VRAM Total</span><span class="ph-field-value">-- GB</span></div>
+            <div class="ph-field"><span class="ph-field-label">VRAM Used</span><span class="ph-field-value">-- GB</span></div>
+            <div class="ph-field"><span class="ph-field-label">GPU Temp</span><span class="ph-field-value">-- &deg;C</span></div>
+            <div class="ph-field"><span class="ph-field-label">Driver API</span><span class="ph-field-value">-- --</span></div>
+          </div>
+          <div class="ph-card">
+            <div class="ph-card-title">VRAM Usage Breakdown</div>
+            <div class="ph-chart ph-chart-tall">Stacked bar: textures, framebuffers, models, other</div>
+          </div>
+          <div class="ph-card">
+            <div class="ph-card-title">VRAM Categories</div>
+            <div class="ph-bar-row">
+              <span class="ph-bar-label">Textures</span>
+              <div class="ph-bar"><div class="ph-bar-fill" style="width:0%;background:var(--accent-cyan)"></div></div>
+              <span class="ph-bar-value">--</span>
+            </div>
+            <div class="ph-bar-row">
+              <span class="ph-bar-label">Framebuffers</span>
+              <div class="ph-bar"><div class="ph-bar-fill" style="width:0%;background:var(--accent-amber)"></div></div>
+              <span class="ph-bar-value">--</span>
+            </div>
+            <div class="ph-bar-row">
+              <span class="ph-bar-label">AI Models</span>
+              <div class="ph-bar"><div class="ph-bar-fill" style="width:0%;background:var(--accent-green)"></div></div>
+              <span class="ph-bar-value">--</span>
+            </div>
+            <div class="ph-bar-row">
+              <span class="ph-bar-label">Other</span>
+              <div class="ph-bar"><div class="ph-bar-fill" style="width:0%;background:var(--text-dim)"></div></div>
+              <span class="ph-bar-value">--</span>
+            </div>
+          </div>
+          <div class="ph-card">
+            <div class="ph-card-title">AI Layer Offload</div>
+            <div class="toggle-row"><span>Auto-Offload</span><span class="ph-field-value">-- off --</span></div>
+            <div class="toggle-row"><span>Shared Memory</span><span class="ph-field-value">-- -- --</span></div>
+            <div class="ph-field"><span class="ph-field-label">Offload Strategy</span><span class="ph-field-value">-- none --</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <!-- PAGE: ADR-023 Bloatware Silencer                           -->
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <div class="page" id="page-bloatware">
+      <div class="page-inner">
+        <div class="page-header">
+          <span class="page-icon">&#128683;</span>
+          <h2>Bloatware Silencer</h2>
+        </div>
+        <div class="page-status">ADR-023 &middot; Placeholder</div>
+        <p class="page-desc">
+          Identifies and silences resource-wasting processes using a
+          curated bloatware database. Three silencing levels: suspend,
+          limit, and quarantine. Corporate/enterprise detection prevents
+          disabling managed software.
+        </p>
+        <div class="page-grid">
+          <div class="ph-card">
+            <div class="ph-card-title">Scan Results</div>
+            <div class="ph-field"><span class="ph-field-label">Bloatware Found</span><span class="ph-field-value">-- 0 --</span></div>
+            <div class="ph-field"><span class="ph-field-label">Memory Reclaimable</span><span class="ph-field-value">-- MB</span></div>
+            <div class="ph-field"><span class="ph-field-label">Last Scan</span><span class="ph-field-value">-- never --</span></div>
+            <div class="ph-field"><span class="ph-field-label">Corporate Mode</span><span class="ph-field-value">-- auto --</span></div>
+          </div>
+          <div class="ph-card">
+            <div class="ph-card-title">Silencing Levels</div>
+            <div class="ph-list-item"><span class="ph-dot" style="background:var(--accent-amber)"></span> <b>Suspend</b> &mdash; Pause process, resume on demand</div>
+            <div class="ph-list-item"><span class="ph-dot" style="background:var(--accent-red)"></span> <b>Limit</b> &mdash; Cap CPU + memory usage</div>
+            <div class="ph-list-item"><span class="ph-dot" style="background:var(--text-dim)"></span> <b>Quarantine</b> &mdash; Prevent startup entirely</div>
+          </div>
+          <div class="ph-card">
+            <div class="ph-card-title">Detected Bloatware</div>
+            <div class="ph-chart">List of detected bloatware with actions</div>
+          </div>
+          <div class="ph-card">
+            <div class="ph-card-title">Memory Savings</div>
+            <div class="ph-chart">Before/after memory comparison</div>
+          </div>
+        </div>
+        <div class="ph-actions">
+          <button class="ph-btn">Scan Now</button>
+          <button class="ph-btn">Restore All</button>
+          <button class="ph-btn">Update Database</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <!-- PAGE: ADR-024 Time-Travel System State                     -->
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <div class="page" id="page-timeline">
+      <div class="page-inner">
+        <div class="page-header">
+          <span class="page-icon">&#9203;</span>
+          <h2>Time-Travel System State</h2>
+        </div>
+        <div class="page-status">ADR-024 &middot; Placeholder</div>
+        <p class="page-desc">
+          Capture system state snapshots and navigate through them like
+          a timeline. Compare any two snapshots to see what changed.
+          Diagnose issues by inspecting past states and optionally
+          roll back to a known-good configuration.
+        </p>
+        <div class="page-grid">
+          <div class="ph-card" style="grid-column:span 2">
+            <div class="ph-card-title">State Timeline</div>
+            <div class="ph-timeline">
+              <div class="ph-timeline-item active">
+                <div><b>Current State</b></div>
+                <div class="ph-timeline-time">-- now --</div>
+              </div>
+              <div class="ph-timeline-item">
+                <div>No snapshots captured yet</div>
+                <div class="ph-timeline-time">-- --</div>
+              </div>
+            </div>
+          </div>
+          <div class="ph-card">
+            <div class="ph-card-title">Snapshot Info</div>
+            <div class="ph-field"><span class="ph-field-label">Total Snapshots</span><span class="ph-field-value">-- 0 --</span></div>
+            <div class="ph-field"><span class="ph-field-label">Storage Used</span><span class="ph-field-value">-- 0 MB --</span></div>
+            <div class="ph-field"><span class="ph-field-label">Max Snapshots</span><span class="ph-field-value">-- 100 --</span></div>
+            <div class="ph-field"><span class="ph-field-label">Auto-Capture</span><span class="ph-field-value">-- 15 min --</span></div>
+          </div>
+          <div class="ph-card">
+            <div class="ph-card-title">Diff View</div>
+            <div class="ph-chart ph-chart-tall">Select two snapshots to compare</div>
+          </div>
+        </div>
+        <div class="ph-actions">
+          <button class="ph-btn">Capture Now</button>
+          <button class="ph-btn">Compare Snapshots</button>
+          <button class="ph-btn">Rollback</button>
+          <button class="ph-btn">Export Timeline</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <!-- PAGE: ADR-025 Agentic Desktop Automation                   -->
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <div class="page" id="page-agent">
+      <div class="page-inner">
+        <div class="page-header">
+          <span class="page-icon">&#129302;</span>
+          <h2>Agentic Desktop Automation</h2>
+        </div>
+        <div class="page-status">ADR-025 &middot; Placeholder</div>
+        <p class="page-desc">
+          AI agent that observes your desktop via a 3-tier vision model,
+          learns optimization patterns through online reinforcement learning
+          with LoRA fine-tuning, and autonomously manages system resources.
+          Protected by AIDefence against prompt injection.
+        </p>
+        <div class="page-grid">
+          <div class="ph-card">
+            <div class="ph-card-title">Agent Status</div>
+            <div class="ph-field"><span class="ph-field-label">State</span><span class="ph-field-value">-- inactive --</span></div>
+            <div class="ph-field"><span class="ph-field-label">Vision Model</span><span class="ph-field-value">-- not loaded --</span></div>
+            <div class="ph-field"><span class="ph-field-label">RL Episodes</span><span class="ph-field-value">-- 0 --</span></div>
+            <div class="ph-field"><span class="ph-field-label">Actions Taken</span><span class="ph-field-value">-- 0 --</span></div>
+            <div class="ph-field"><span class="ph-field-label">Success Rate</span><span class="ph-field-value">-- % --</span></div>
+          </div>
+          <div class="ph-card">
+            <div class="ph-card-title">Vision Pipeline</div>
+            <div class="ph-list-item"><span class="ph-dot" style="background:var(--accent-cyan)"></span> <b>Tier 1</b> &mdash; Fast screen classifier (50ms)</div>
+            <div class="ph-list-item"><span class="ph-dot" style="background:var(--accent-amber)"></span> <b>Tier 2</b> &mdash; Region detector (200ms)</div>
+            <div class="ph-list-item"><span class="ph-dot" style="background:var(--accent-purple)"></span> <b>Tier 3</b> &mdash; Full scene understanding (1s)</div>
+          </div>
+          <div class="ph-card">
+            <div class="ph-card-title">Learning Progress</div>
+            <div class="ph-chart ph-chart-tall">RL reward curve over episodes</div>
+          </div>
+          <div class="ph-card">
+            <div class="ph-card-title">Security (AIDefence)</div>
+            <div class="ph-field"><span class="ph-field-label">Injection Scans</span><span class="ph-field-value">-- 0 --</span></div>
+            <div class="ph-field"><span class="ph-field-label">Threats Blocked</span><span class="ph-field-value">-- 0 --</span></div>
+            <div class="ph-field"><span class="ph-field-label">Safety Level</span><span class="ph-field-value">-- high --</span></div>
+            <div class="ph-field"><span class="ph-field-label">Audit Log</span><span class="ph-field-value">-- empty --</span></div>
+          </div>
+        </div>
+        <div class="ph-actions">
+          <button class="ph-btn">Start Agent</button>
+          <button class="ph-btn">Training Mode</button>
+          <button class="ph-btn">View Audit Log</button>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /content -->
 
   <!-- Footer: Runtime Loop -->
   <footer>
@@ -524,6 +1447,24 @@ function dismissWelcome(){
   if(window.ipc) window.ipc.postMessage(JSON.stringify({type:'welcome_done'}));
 }
 
+// ── Page Navigation ───────────────────────────────────────────
+function showPage(id){
+  // Hide all pages
+  document.querySelectorAll('.page').forEach(function(p){ p.classList.remove('active'); });
+  // Deactivate all nav items
+  document.querySelectorAll('.nav-item').forEach(function(n){ n.classList.remove('active'); });
+  // Show target page
+  var page = document.getElementById('page-' + id);
+  if(page) page.classList.add('active');
+  // Activate nav item
+  var nav = document.querySelector('.nav-item[data-page="' + id + '"]');
+  if(nav) nav.classList.add('active');
+  // Resize Three.js if returning to dashboard
+  if(id === 'dashboard' && typeof handleResize === 'function'){
+    setTimeout(handleResize, 50);
+  }
+}
+
 // ── Theme ──────────────────────────────────────────────────────
 let currentTheme = INITIAL_THEME;
 updateThemeButton();
@@ -537,7 +1478,7 @@ function toggleTheme(){
   if(typeof updateSceneTheme === 'function') updateSceneTheme(currentTheme);
 }
 function updateThemeButton(){
-  const btn = document.getElementById('themeBtn');
+  var btn = document.getElementById('themeBtn');
   btn.textContent = currentTheme === 'dark' ? 'Light' : 'Dark';
 }
 
@@ -549,7 +1490,7 @@ function requestProcesses(){
   if(window.ipc) window.ipc.postMessage(JSON.stringify({type:'get_processes'}));
 }
 function doOptimize(aggressive){
-  const btn = document.getElementById(aggressive ? 'btnDeep' : 'btnOptimize');
+  var btn = document.getElementById(aggressive ? 'btnDeep' : 'btnOptimize');
   btn.disabled = true;
   btn.textContent = 'Working...';
   if(window.sceneEffect) window.sceneEffect('working');
@@ -559,10 +1500,10 @@ function doOptimize(aggressive){
 // ── Callbacks (invoked from Rust) ──────────────────────────────
 window.updateMetrics = function(d){
   // Memory gauge
-  const load = d.memory_load || 0;
-  const circ = 213.6;
-  const offset = circ - (circ * load / 100);
-  const fill = document.getElementById('gaugeFill');
+  var load = d.memory_load || 0;
+  var circ = 213.6;
+  var offset = circ - (circ * load / 100);
+  var fill = document.getElementById('gaugeFill');
   fill.style.strokeDashoffset = offset;
   // colour by load
   if(load > 85) fill.style.stroke = 'var(--accent-red)';
@@ -576,7 +1517,7 @@ window.updateMetrics = function(d){
 
   // CPU
   document.getElementById('cpuModel').textContent = d.cpu_model || '--';
-  const chips = document.getElementById('cpuChips');
+  var chips = document.getElementById('cpuChips');
   chips.innerHTML = '';
   var features = [];
   if(d.avx2 !== undefined) features.push(['AVX2', d.avx2]);
@@ -592,11 +1533,11 @@ window.updateMetrics = function(d){
 };
 
 window.updateProcesses = function(list){
-  const el = document.getElementById('procList');
+  var el = document.getElementById('procList');
   if(!list || !list.length){ el.innerHTML = '<div style="font-size:11px;color:var(--text-dim)">No data</div>'; return; }
   el.innerHTML = '';
   list.slice(0, 15).forEach(function(p){
-    const row = document.createElement('div');
+    var row = document.createElement('div');
     row.className = 'proc-row';
     row.innerHTML = '<span class="proc-name">'+escHtml(p.name)+'</span>'
       +'<span class="proc-mem">'+p.memory_mb.toFixed(0)+' MB</span>';
@@ -737,8 +1678,8 @@ setTimeout(function(){ requestMetrics(); requestProcesses(); requestSettings(); 
 
 // ── Runtime Loop Animation ─────────────────────────────────────
 (function(){
-  const steps = document.querySelectorAll('.step');
-  let idx = 0;
+  var steps = document.querySelectorAll('.step');
+  var idx = 0;
   setInterval(function(){
     steps.forEach(function(s){ s.classList.remove('active'); });
     steps[idx].classList.add('active');
@@ -776,49 +1717,49 @@ setTimeout(function(){ requestMetrics(); requestProcesses(); requestSettings(); 
     return;
   }
 
-  const canvas = document.getElementById('world-canvas');
-  const container = document.getElementById('main');
-  const W = container.clientWidth;
-  const H = container.clientHeight;
+  var canvas = document.getElementById('world-canvas');
+  var container = document.getElementById('dash-main');
+  var W = container.clientWidth;
+  var H = container.clientHeight;
 
   // Scene
-  const scene = new THREE.Scene();
+  var scene = new THREE.Scene();
   scene.fog = new THREE.FogExp2(0x0a0e1a, 0.012);
 
-  const camera = new THREE.PerspectiveCamera(55, W/H, 0.1, 500);
+  var camera = new THREE.PerspectiveCamera(55, W/H, 0.1, 500);
   camera.position.set(0, 1.5, 7);
   camera.lookAt(0, 0, 0);
 
-  const renderer = new THREE.WebGLRenderer({canvas:canvas, antialias:true, alpha:true});
+  var renderer = new THREE.WebGLRenderer({canvas:canvas, antialias:true, alpha:true});
   renderer.setSize(W, H);
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   renderer.setClearColor(0x000000, 0);
 
   // ── World Model: wireframe icosahedron ───────
-  const coreGeo = new THREE.IcosahedronGeometry(1.2, 1);
-  const coreMat = new THREE.MeshBasicMaterial({
+  var coreGeo = new THREE.IcosahedronGeometry(1.2, 1);
+  var coreMat = new THREE.MeshBasicMaterial({
     color: 0x4ecdc4, wireframe: true, transparent: true, opacity: 0.5
   });
-  const core = new THREE.Mesh(coreGeo, coreMat);
+  var core = new THREE.Mesh(coreGeo, coreMat);
   scene.add(core);
 
   // Inner glow sphere
-  const glowGeo = new THREE.SphereGeometry(0.9, 24, 24);
-  const glowMat = new THREE.MeshBasicMaterial({
+  var glowGeo = new THREE.SphereGeometry(0.9, 24, 24);
+  var glowMat = new THREE.MeshBasicMaterial({
     color: 0x4ecdc4, transparent: true, opacity: 0.06
   });
-  const glow = new THREE.Mesh(glowGeo, glowMat);
+  var glow = new THREE.Mesh(glowGeo, glowMat);
   scene.add(glow);
 
   // ── Vector Layer: particles ──────────────────
-  const PARTICLE_COUNT = 300;
-  const pGeo = new THREE.BufferGeometry();
-  const pPos = new Float32Array(PARTICLE_COUNT * 3);
-  const pVel = new Float32Array(PARTICLE_COUNT * 3); // drift velocities
-  for(let i=0; i<PARTICLE_COUNT; i++){
-    const r = 1.8 + Math.random() * 3.0;
-    const theta = Math.random() * Math.PI * 2;
-    const phi = Math.acos(Math.random() * 2 - 1);
+  var PARTICLE_COUNT = 300;
+  var pGeo = new THREE.BufferGeometry();
+  var pPos = new Float32Array(PARTICLE_COUNT * 3);
+  var pVel = new Float32Array(PARTICLE_COUNT * 3);
+  for(var i=0; i<PARTICLE_COUNT; i++){
+    var r = 1.8 + Math.random() * 3.0;
+    var theta = Math.random() * Math.PI * 2;
+    var phi = Math.acos(Math.random() * 2 - 1);
     pPos[i*3]   = r * Math.sin(phi) * Math.cos(theta);
     pPos[i*3+1] = r * Math.sin(phi) * Math.sin(theta);
     pPos[i*3+2] = r * Math.cos(phi);
@@ -827,39 +1768,39 @@ setTimeout(function(){ requestMetrics(); requestProcesses(); requestSettings(); 
     pVel[i*3+2] = (Math.random()-0.5)*0.002;
   }
   pGeo.setAttribute('position', new THREE.BufferAttribute(pPos, 3));
-  const pMat = new THREE.PointsMaterial({
+  var pMat = new THREE.PointsMaterial({
     color: 0x4ecdc4, size: 0.04, transparent: true, opacity: 0.45,
     sizeAttenuation: true
   });
-  const particles = new THREE.Points(pGeo, pMat);
+  var particles = new THREE.Points(pGeo, pMat);
   scene.add(particles);
 
   // ── Graph Layer: edge lines ──────────────────
-  const edgeVerts = [];
-  for(let i=0; i<80; i++){
-    const a = Math.floor(Math.random()*PARTICLE_COUNT)*3;
-    const b = Math.floor(Math.random()*PARTICLE_COUNT)*3;
+  var edgeVerts = [];
+  for(var i=0; i<80; i++){
+    var a = Math.floor(Math.random()*PARTICLE_COUNT)*3;
+    var b = Math.floor(Math.random()*PARTICLE_COUNT)*3;
     edgeVerts.push(pPos[a],pPos[a+1],pPos[a+2], pPos[b],pPos[b+1],pPos[b+2]);
   }
-  const edgeGeo = new THREE.BufferGeometry();
+  var edgeGeo = new THREE.BufferGeometry();
   edgeGeo.setAttribute('position', new THREE.Float32BufferAttribute(edgeVerts, 3));
-  const edgeMat = new THREE.LineBasicMaterial({
+  var edgeMat = new THREE.LineBasicMaterial({
     color: 0x4ecdc4, transparent: true, opacity: 0.07
   });
-  const edges = new THREE.LineSegments(edgeGeo, edgeMat);
+  var edges = new THREE.LineSegments(edgeGeo, edgeMat);
   scene.add(edges);
 
   // ── Attention Layer: curved flow lines ───────
-  const flowGroup = new THREE.Group();
-  for(let i=0; i<12; i++){
-    const curve = new THREE.QuadraticBezierCurve3(
+  var flowGroup = new THREE.Group();
+  for(var i=0; i<12; i++){
+    var curve = new THREE.QuadraticBezierCurve3(
       new THREE.Vector3((Math.random()-0.5)*4, (Math.random()-0.5)*3, (Math.random()-0.5)*3),
       new THREE.Vector3((Math.random()-0.5)*2, (Math.random()-0.5)*2, (Math.random()-0.5)*2),
       new THREE.Vector3((Math.random()-0.5)*4, (Math.random()-0.5)*3, (Math.random()-0.5)*3)
     );
-    const pts = curve.getPoints(20);
-    const fGeo = new THREE.BufferGeometry().setFromPoints(pts);
-    const fMat = new THREE.LineBasicMaterial({
+    var pts = curve.getPoints(20);
+    var fGeo = new THREE.BufferGeometry().setFromPoints(pts);
+    var fMat = new THREE.LineBasicMaterial({
       color: 0xd4a574, transparent: true, opacity: 0.12
     });
     flowGroup.add(new THREE.Line(fGeo, fMat));
@@ -867,43 +1808,43 @@ setTimeout(function(){ requestMetrics(); requestProcesses(); requestSettings(); 
   scene.add(flowGroup);
 
   // ── Coherence Layer: torus ring ──────────────
-  const torusGeo = new THREE.TorusGeometry(3.2, 0.015, 16, 100);
-  const torusMat = new THREE.MeshBasicMaterial({
+  var torusGeo = new THREE.TorusGeometry(3.2, 0.015, 16, 100);
+  var torusMat = new THREE.MeshBasicMaterial({
     color: 0xd4a574, transparent: true, opacity: 0.2
   });
-  const torus = new THREE.Mesh(torusGeo, torusMat);
+  var torus = new THREE.Mesh(torusGeo, torusMat);
   torus.rotation.x = Math.PI * 0.45;
   scene.add(torus);
 
   // Second thinner ring
-  const torus2Geo = new THREE.TorusGeometry(2.5, 0.01, 16, 80);
-  const torus2Mat = new THREE.MeshBasicMaterial({
+  var torus2Geo = new THREE.TorusGeometry(2.5, 0.01, 16, 80);
+  var torus2Mat = new THREE.MeshBasicMaterial({
     color: 0x4ecdc4, transparent: true, opacity: 0.1
   });
-  const torus2 = new THREE.Mesh(torus2Geo, torus2Mat);
+  var torus2 = new THREE.Mesh(torus2Geo, torus2Mat);
   torus2.rotation.x = Math.PI * 0.6;
   torus2.rotation.y = Math.PI * 0.3;
   scene.add(torus2);
 
   // ── Shockwave Ring (created once, hidden until triggered) ──
-  const shockGeo = new THREE.RingGeometry(0.1, 0.25, 64);
-  const shockMat = new THREE.MeshBasicMaterial({
+  var shockGeo = new THREE.RingGeometry(0.1, 0.25, 64);
+  var shockMat = new THREE.MeshBasicMaterial({
     color: 0x6bcb77, transparent: true, opacity: 0, side: THREE.DoubleSide
   });
-  const shockRing = new THREE.Mesh(shockGeo, shockMat);
+  var shockRing = new THREE.Mesh(shockGeo, shockMat);
   scene.add(shockRing);
 
   // ── Effect State ──────────────────────────────
   var fx = {
-    mode: 'idle',       // idle | working | success | error
-    t0: 0,              // time effect started
-    intensity: 0,       // 0..1 ramp
-    shockScale: 0,      // shockwave expansion
+    mode: 'idle',
+    t0: 0,
+    intensity: 0,
+    shockScale: 0,
     shockOpacity: 0,
     coreScaleTarget: 1,
     coreScale: 1,
-    speedMult: 1,       // rotation speed multiplier
-    particlePull: 0,    // inward pull strength
+    speedMult: 1,
+    particlePull: 0,
     flashColor: null,
     flashFade: 0
   };
@@ -913,10 +1854,10 @@ setTimeout(function(){ requestMetrics(); requestProcesses(); requestSettings(); 
   for(var i=0;i<pBase.length;i++) pBase[i] = pPos[i];
 
   // ── Animation Loop ───────────────────────────
-  const clock = new THREE.Clock();
+  var clock = new THREE.Clock();
   function animate(){
     requestAnimationFrame(animate);
-    const t = clock.getElapsedTime();
+    var t = clock.getElapsedTime();
     var dt = Math.min(clock.getDelta(), 0.05);
 
     // ── Effect transitions ──────────────────────
@@ -936,7 +1877,6 @@ setTimeout(function(){ requestMetrics(); requestProcesses(); requestSettings(); 
     }
     else if(fx.mode === 'success'){
       var age = t - fx.t0;
-      // Burst phase (0-0.6s): expand particles outward, shockwave
       if(age < 0.6){
         fx.particlePull = -0.04 * (1 - age/0.6);
         fx.shockScale = age / 0.6 * 18;
@@ -944,7 +1884,6 @@ setTimeout(function(){ requestMetrics(); requestProcesses(); requestSettings(); 
         fx.coreScaleTarget = 1.5 - age/0.6 * 0.3;
         fx.speedMult = 5 - age/0.6 * 3;
       }
-      // Settle phase (0.6-2.5s): ease back to idle
       else if(age < 2.5){
         var p = (age - 0.6) / 1.9;
         fx.particlePull = 0;
@@ -964,7 +1903,6 @@ setTimeout(function(){ requestMetrics(); requestProcesses(); requestSettings(); 
         fx.mode = 'idle';
         resetFx();
       }
-      // Flash green fade
       if(fx.flashFade > 0){
         fx.flashFade = Math.max(0, fx.flashFade - dt * 1.2);
         coreMat.color.lerpColors(new THREE.Color(0x4ecdc4), new THREE.Color(0x6bcb77), fx.flashFade);
@@ -975,10 +1913,8 @@ setTimeout(function(){ requestMetrics(); requestProcesses(); requestSettings(); 
     else if(fx.mode === 'error'){
       var age = t - fx.t0;
       if(age < 1.5){
-        // Shake camera
         camera.position.x = Math.sin(age * 40) * 0.08 * (1 - age/1.5);
         camera.position.y = 1.5 + Math.cos(age * 35) * 0.06 * (1 - age/1.5);
-        // Flash red fade
         var rf = Math.max(0, 1 - age/1.0);
         coreMat.color.lerpColors(new THREE.Color(0x4ecdc4), new THREE.Color(0xe06060), rf);
         glowMat.color.lerpColors(new THREE.Color(0x4ecdc4), new THREE.Color(0xe06060), rf);
@@ -992,7 +1928,6 @@ setTimeout(function(){ requestMetrics(); requestProcesses(); requestSettings(); 
       }
     }
     else {
-      // idle: gently ease everything back
       fx.speedMult += (1 - fx.speedMult) * dt * 2;
       fx.coreScaleTarget = 1;
       fx.particlePull = 0;
@@ -1013,14 +1948,12 @@ setTimeout(function(){ requestMetrics(); requestProcesses(); requestSettings(); 
     glow.rotation.y = -t * 0.1 * fx.speedMult;
 
     // ── Particles (drift + pull effect) ─────────
-    const pos = pGeo.attributes.position.array;
-    for(let i=0; i<PARTICLE_COUNT; i++){
+    var pos = pGeo.attributes.position.array;
+    for(var i=0; i<PARTICLE_COUNT; i++){
       var ix=i*3, iy=i*3+1, iz=i*3+2;
-      // Normal drift
       pos[ix]  += pVel[ix];
       pos[iy]  += pVel[iy];
       pos[iz]  += pVel[iz];
-      // Pull toward/away from center
       if(fx.particlePull !== 0){
         var dx=pos[ix], dy=pos[iy], dz=pos[iz];
         var d = Math.sqrt(dx*dx+dy*dy+dz*dz) || 1;
@@ -1028,7 +1961,6 @@ setTimeout(function(){ requestMetrics(); requestProcesses(); requestSettings(); 
         pos[iy] -= (dy/d) * fx.particlePull;
         pos[iz] -= (dz/d) * fx.particlePull;
       }
-      // Boundary bounce
       var dx2=pos[ix],dy2=pos[iy],dz2=pos[iz];
       var dist = Math.sqrt(dx2*dx2+dy2*dy2+dz2*dz2);
       if(dist > 6 || dist < 0.5){
@@ -1088,7 +2020,6 @@ setTimeout(function(){ requestMetrics(); requestProcesses(); requestSettings(); 
       fx.t0 = now;
       fx.flashFade = 1;
       shockMat.color.set(0x6bcb77);
-      // Boost particle velocities outward for burst
       var pos = pGeo.attributes.position.array;
       for(var i=0;i<PARTICLE_COUNT;i++){
         var dx=pos[i*3],dy=pos[i*3+1],dz=pos[i*3+2];
@@ -1105,17 +2036,21 @@ setTimeout(function(){ requestMetrics(); requestProcesses(); requestSettings(); 
   };
 
   // ── Resize Handler ───────────────────────────
-  window.addEventListener('resize', function(){
-    const w = container.clientWidth;
-    const h = container.clientHeight;
-    camera.aspect = w / h;
-    camera.updateProjectionMatrix();
-    renderer.setSize(w, h);
-  });
+  function handleResize(){
+    var w = container.clientWidth;
+    var h = container.clientHeight;
+    if(w > 0 && h > 0){
+      camera.aspect = w / h;
+      camera.updateProjectionMatrix();
+      renderer.setSize(w, h);
+    }
+  }
+  window.handleResize = handleResize;
+  window.addEventListener('resize', handleResize);
 
   // ── Theme Update ─────────────────────────────
   window.updateSceneTheme = function(theme){
-    const dark = theme === 'dark';
+    var dark = theme === 'dark';
     scene.fog.color.set(dark ? 0x0a0e1a : 0xe8ecf2);
     renderer.setClearColor(0x000000, 0);
     if(fx.mode === 'idle'){
