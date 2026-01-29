@@ -201,6 +201,32 @@ fn handle_ipc(
                 let _ = s.save();
             }
         }
+        // Feature module dispatch (ADR-013 through ADR-025)
+        Some(msg_type) => {
+            use crate::features;
+            let result = features::profiles::handle_ipc(msg_type, &req)
+                .or_else(|| features::health::handle_ipc(msg_type, &req))
+                .or_else(|| features::startup::handle_ipc(msg_type, &req))
+                .or_else(|| features::wsl2::handle_ipc(msg_type, &req))
+                .or_else(|| features::build::handle_ipc(msg_type, &req))
+                .or_else(|| features::leaks::handle_ipc(msg_type, &req))
+                .or_else(|| features::prefetch::handle_ipc(msg_type, &req))
+                .or_else(|| features::thermal::handle_ipc(msg_type, &req))
+                .or_else(|| features::plugins::handle_ipc(msg_type, &req))
+                .or_else(|| features::gpu::handle_ipc(msg_type, &req))
+                .or_else(|| features::bloatware::handle_ipc(msg_type, &req))
+                .or_else(|| features::timeline::handle_ipc(msg_type, &req))
+                .or_else(|| features::agent::handle_ipc(msg_type, &req));
+
+            if let Some(json) = result {
+                push_js(proxy, &format!(
+                    "if(window.handleFeatureResponse)window.handleFeatureResponse('{}',{})",
+                    msg_type, json
+                ));
+            } else {
+                tracing::debug!("Unknown IPC type: {:?}", msg_type);
+            }
+        }
         _ => {
             tracing::debug!("Unknown IPC type: {:?}", req["type"]);
         }

@@ -1492,6 +1492,83 @@ setTimeout(function(){ requestMetrics(); requestProcesses(); requestSettings(); 
     flowGroup.children.forEach(function(l){ l.material.color.set(dark ? 0xd4a574 : 0xb8864a); });
   };
 })();
+
+// ── Feature Response Dispatcher ──────────────────────────────
+window.handleFeatureResponse = function(msgType, data) {
+    var updateMap = {
+        'get_profiles': 'profilesUpdate',
+        'get_profile_history': 'profilesUpdate',
+        'create_profile': 'profilesUpdate',
+        'delete_profile': 'profilesUpdate',
+        'set_profile': 'profilesUpdate',
+        'import_profile': 'profilesUpdate',
+        'export_profile': 'profilesUpdate',
+        'set_profile_setting': 'profilesUpdate',
+        'get_health_score': 'healthUpdate',
+        'get_health_history': 'healthUpdate',
+        'get_health_recommendations': 'healthUpdate',
+        'apply_health_recommendations': 'healthUpdate',
+        'get_startup_items': 'startupUpdate',
+        'get_boot_estimate': 'startupUpdate',
+        'set_startup_item': 'startupUpdate',
+        'optimize_startup': 'startupUpdate',
+        'reset_startup': 'startupUpdate',
+        'get_wsl2_status': 'wsl2_Update',
+        'get_wsl2_processes': 'wsl2_Update',
+        'set_wsl2_config': 'wsl2_Update',
+        'reclaim_wsl2_memory': 'wsl2_Update',
+        'get_build_tools': 'build_Update',
+        'get_build_history': 'build_Update',
+        'set_build_config': 'build_Update',
+        'optimize_builds': 'build_Update',
+        'clear_cache': 'build_Update',
+        'get_leak_suspects': 'leaks_Update',
+        'get_leak_history': 'leaks_Update',
+        'analyze_leaks': 'leaks_Update',
+        'kill_leak_suspect': 'leaks_Update',
+        'get_prefetch_status': 'prefetch_Update',
+        'get_prefetch_predictions': 'prefetch_Update',
+        'train_prefetcher': 'prefetch_Update',
+        'clear_prefetch_cache': 'prefetch_Update',
+        'get_thermal_status': 'thermal_Update',
+        'get_thermal_history': 'thermal_Update',
+        'set_thermal_config': 'thermal_Update',
+        'enable_silent_mode': 'thermal_Update',
+        'get_installed_plugins': 'plugins_Update',
+        'get_marketplace_plugins': 'plugins_Update',
+        'install_plugin': 'plugins_Update',
+        'uninstall_plugin': 'plugins_Update',
+        'enable_plugin': 'plugins_Update',
+        'disable_plugin': 'plugins_Update',
+        'configure_plugin': 'plugins_Update',
+        'get_gpu_status': 'gpu_Update',
+        'get_gpu_processes': 'gpu_Update',
+        'get_vram_history': 'gpu_Update',
+        'set_gpu_config': 'gpu_Update',
+        'optimize_vram': 'gpu_Update',
+        'scan_bloatware': 'Bloatware_Update',
+        'remove_bloatware': 'Bloatware_Update',
+        'set_telemetry_level': 'Bloatware_Update',
+        'restore_bloatware': 'Bloatware_Update',
+        'get_checkpoints': 'Timeline_Update',
+        'create_checkpoint': 'Timeline_Update',
+        'rollback_checkpoint': 'Timeline_Update',
+        'get_diff': 'Timeline_Update',
+        'get_diagnosis': 'Timeline_Update',
+        'get_agent_status': 'Agent_Update',
+        'enable_agent': 'Agent_Update',
+        'disable_agent': 'Agent_Update',
+        'load_model': 'Agent_Update',
+        'train_model': 'Agent_Update',
+        'record_trajectory': 'Agent_Update',
+        'block_threat': 'Agent_Update',
+        'get_audit_log': 'Agent_Update'
+    };
+    var fnName = updateMap[msgType];
+    if (fnName && window.RuVectorPages && typeof window.RuVectorPages[fnName] === 'function') {
+        window.RuVectorPages[fnName](data);
+    }
+};
 </script>
 
 </body>

@@ -49,6 +49,9 @@ pub mod macos;
 // Application-specific optimization (cross-platform)
 pub mod apps;
 
+// Feature backends for Control Center pages (ADR-013 through ADR-025)
+pub mod features;
+
 // Re-exports - Core
 pub use core::config::OptimizerConfig;
 #[cfg(target_os = "windows")]
